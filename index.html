@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Daily Content</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Daily Content">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f8f9fa'/><text x='50' y='55' font-family='Arial' font-size='30' text-anchor='middle' fill='%23333'>DC</text></svg>">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+            /* iOS safe area support */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure container takes full height */
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px; /* Default padding */
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-top: 20px;
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 300;
+            color: #555;
+            margin-bottom: 10px;
+        }
+        
+        .date {
+            font-size: 0.9rem;
+            color: #888;
+            font-weight: 300;
+        }
+        
+        .content-container {
+            flex: 1; /* Allows it to take available vertical space */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden; /* For transition effects */
+            padding-bottom: 20px; /* Ensure space for hint/dots even if card is tall */
+        }
+        
+        .content-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease; /* Snappier animation */
+            user-select: none;
+            position: relative;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .content-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .content-card.sliding-out {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        
+        .content-card.sliding-in {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        
+        .content-type {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .content-title {
+            font-size: 1.4rem;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .content-body {
+            font-size: 1rem;
+            color: #555;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+        
+        .content-meta {
+            font-size: 0.9rem;
+            color: #888;
+            font-style: italic;
+        }
+        
+        /* Adjusted positioning for swipe hint */
+        .swipe-hint {
+            text-align: center;
+            font-size: 0.75rem; /* Slightly smaller for less intrusiveness */
+            color: #aaa;
+            opacity: 0.7;
+            margin-top: 10px; /* Space above the hint */
+            margin-bottom: 10px; /* Space between hint and dots */
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px; /* Reduced margin, now flow is managed by swipe-hint's margin-bottom */
+            gap: 10px; /* Slightly more space between dots */
+            padding-bottom: env(safe-area-inset-bottom); /* Ensure dots are above safe area */
+        }
+        
+        .nav-dot {
+            width: 12px; /* Increased size for visibility */
+            height: 12px; /* Increased size for visibility */
+            border-radius: 50%;
+            background-color: #bbb; /* Better visibility when inactive */
+            border: 1px solid #ccc; /* Subtle border */
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease;
+        }
+        
+        .nav-dot.active {
+            background-color: #007AFF; /* iOS blue */
+            border-color: #007AFF; /* Border matches active color */
+            transform: scale(1.2); /* Active dot is more prominent */
+        }
+        
+        .nav-dot:hover:not(.active) {
+            background-color: #999;
+            border-color: #aaa;
+        }
+        
+        .loading {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .error {
+            color: #ff6b6b;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px; /* Reduced padding for smaller screens to maximize content area */
+            }
+            
+            .content-card {
+                padding: 25px 15px; /* Reduced padding on card for smaller screens */
+                min-height: 220px; /* Slightly smaller min-height */
+            }
+            
+            .header h1 {
+                font-size: 1.4rem;
+            }
+            
+            .content-title {
+                font-size: 1.1rem;
+            }
+            
+            .content-body {
+                font-size: 0.9rem;
+            }
+
+            .swipe-hint {
+                font-size: 0.7rem; /* Even smaller on tiny screens */
+                margin-top: 5px; /* Less space needed */
+                margin-bottom: 5px;
+            }
+
+            .navigation {
+                margin-top: 10px; /* Less space */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Daily Content</h1>
+            <div class="date" id="current-date"></div>
+        </div>
+        
+        <div class="content-container">
+            <div class="content-card" id="content-card">
+                <div class="content-type" id="content-type">Loading...</div>
+                <div class="content-title" id="content-title"></div>
+                <div class="content-body" id="content-body">Getting your daily content...</div>
+                <div class="content-meta" id="content-meta"></div>
+            </div>
+        </div>
+        
+        <div class="swipe-hint">Tap or swipe to navigate</div>
+
+        <div class="navigation">
+            <div class="nav-dot active" data-index="0"></div>
+            <div class="nav-dot" data-index="1"></div>
+            <div class="nav-dot" data-index="2"></div>
+            <div class="nav-dot" data-index="3"></div>
+            </div>
+        
+    </div>
+
+    <script>
+        class DailyContentApp {
+            constructor() {
+                this.currentIndex = 0;
+                this.contentTypes = [
+                    { type: 'word', title: 'Word of the Day' },
+                    { type: 'history', title: 'Historical Fact' },
+                    { type: 'random', title: 'Random Fact' },
+                    { type: 'quote', title: 'Quote of the Day' }
+                    // Removed Bible Quote content type
+                ];
+                this.contentData = {};
+                this.isLoading = false;
+                this.touchStartX = 0;
+                this.touchEndX = 0;
+                
+                // Hardcoded word list for daily rotation
+                this.wordList = [
+                    'serendipity', 'ephemeral', 'petrichor', 'luminous', 'mellifluous',
+                    'ethereal', 'tranquil', 'vivacious', 'ubiquitous', 'cacophony'
+                ];
+                
+                this.init();
+            }
+            
+            // Get today's date as a string for localStorage key
+            getTodayKey() {
+                const today = new Date();
+                return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            }
+            
+            // Check if we have cached data for today
+            loadCachedData() {
+                const todayKey = this.getTodayKey();
+                const cachedData = localStorage.getItem(`dailyContent_${todayKey}`);
+                
+                if (cachedData) {
+                    try {
+                        this.contentData = JSON.parse(cachedData);
+                        // Validate content types exist in cached data for current app version
+                        // This prevents issues if you remove a content type later but old cache exists
+                        for (const typeDef of this.contentTypes) {
+                            if (!this.contentData[typeDef.type]) {
+                                console.warn(`Cached data missing content for type: ${typeDef.type}. Refetching all.`);
+                                return false; // Force re-fetch if any type is missing
+                            }
+                        }
+                        return true;
+                    } catch (error) {
+                        console.error('Error parsing cached data:', error);
+                        localStorage.removeItem(`dailyContent_${todayKey}`);
+                    }
+                }
+                return false;
+            }
+            
+            // Save today's content to localStorage
+            saveCachedData() {
+                const todayKey = this.getTodayKey();
+                try {
+                    localStorage.setItem(`dailyContent_${todayKey}`, JSON.stringify(this.contentData));
+                    
+                    // Clean up old cached data (keep only today's)
+                    this.cleanupOldCache();
+                } catch (error) {
+                    console.error('Error saving cached data:', error);
+                }
+            }
+            
+            // Remove cached data from previous days
+            cleanupOldCache() {
+                const todayKey = this.getTodayKey();
+                const keysToRemove = [];
+                
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('dailyContent_') && key !== `dailyContent_${todayKey}`) {
+                        keysToRemove.push(key);
+                    }
+                }
+                
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+            }
+            
+            init() {
+                this.updateDate();
+                this.setupEventListeners();
+                this.updateNavigation(); // Ensure dots are correct on init
+                
+                // Try to load cached data first
+                if (this.loadCachedData()) {
+                    console.log('Loaded cached data for today');
+                    this.displayContent();
+                } else {
+                    console.log('No cached data found, fetching fresh content');
+                    // Fetch and then save once all promises are resolved
+                    this.loadAllContent().then(() => {
+                        this.saveCachedData(); // Save content only after ALL fetches are successful
+                        this.displayContent();
+                    });
+                }
+            }
+            
+            updateDate() {
+                const now = new Date();
+                const options = { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                };
+                document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
+            }
+            
+            setupEventListeners() {
+                const card = document.getElementById('content-card');
+                const dots = document.querySelectorAll('.nav-dot');
+                
+                // Click navigation (anywhere on card)
+                card.addEventListener('click', () => this.nextContent());
+                
+                // Dot navigation
+                dots.forEach((dot, index) => {
+                    dot.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent card click from firing
+                        this.goToContent(index);
+                    });
+                });
+                
+                // Touch navigation
+                card.addEventListener('touchstart', (e) => {
+                    this.touchStartX = e.changedTouches[0].screenX;
+                }, { passive: true });
+                
+                card.addEventListener('touchend', (e) => {
+                    this.touchEndX = e.changedTouches[0].screenX;
+                    this.handleSwipe();
+                }, { passive: true });
+            }
+            
+            handleSwipe() {
+                const swipeThreshold = 50;
+                const diff = this.touchStartX - this.touchEndX;
+                
+                if (Math.abs(diff) > swipeThreshold) {
+                    if (diff > 0) {
+                        this.nextContent();
+                    } else {
+                        this.prevContent();
+                    }
+                }
+            }
+            
+            nextContent() {
+                if (this.isLoading) return;
+                this.goToContent((this.currentIndex + 1) % this.contentTypes.length);
+            }
+            
+            prevContent() {
+                if (this.isLoading) return;
+                this.goToContent((this.currentIndex - 1 + this.contentTypes.length) % this.contentTypes.length);
+            }
+            
+            goToContent(index) {
+                if (this.isLoading || index === this.currentIndex) return;
+                
+                this.currentIndex = index;
+                this.updateNavigation();
+                this.displayContent();
+            }
+            
+            updateNavigation() {
+                // Adjust for fewer dots if contentTypes change
+                const navContainer = document.querySelector('.navigation');
+                navContainer.innerHTML = ''; // Clear existing dots
+                this.contentTypes.forEach((_, index) => {
+                    const dot = document.createElement('div');
+                    dot.classList.add('nav-dot');
+                    dot.dataset.index = index;
+                    navContainer.appendChild(dot);
+                });
+                
+                const dots = document.querySelectorAll('.nav-dot');
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === this.currentIndex);
+                });
+            }
+            
+            async loadAllContent() {
+                this.isLoading = true;
+                
+                try {
+                    // Fetch all content types concurrently
+                    await Promise.all([
+                        this.fetchWordOfTheDay(),
+                        this.fetchHistoricalFact(),
+                        this.fetchRandomFact(),
+                        this.fetchQuoteOfTheDay()
+                        // Removed fetchBibleVerseOfTheDay()
+                    ]);
+                    
+                    // Once all fetches are done and contentData is populated,
+                    // the init() method will call saveCachedData() and then displayContent()
+                    
+                } catch (error) {
+                    console.error('Error loading content:', error);
+                    this.showError('Failed to load content. Please try again later.');
+                } finally {
+                    this.isLoading = false;
+                }
+            }
+            
+            async fetchWordOfTheDay() {
+                try {
+                    const dayIndex = new Date().getDay(); // 0 for Sunday, 1 for Monday, etc.
+                    const word = this.wordList[dayIndex % this.wordList.length]; // Ensure it cycles through the list
+                    
+                    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+                    const data = await response.json();
+                    
+                    if (data && data[0]) {
+                        const entry = data[0];
+                        const meaning = entry.meanings[0];
+                        const definition = meaning.definitions[0];
+                        
+                        this.contentData.word = {
+                            word: word,
+                            definition: definition.definition,
+                            example: definition.example || `"${word}" is a beautiful word.`
+                        };
+                    } else {
+                        // Fallback if API returns no data for the word
+                        throw new Error("No definition found for word.");
+                    }
+                } catch (error) {
+                    console.error('Error fetching word:', error);
+                    this.contentData.word = {
+                        word: 'serendipity',
+                        definition: 'The occurrence and development of events by chance in a happy or beneficial way.',
+                        example: 'A fortunate stroke of serendipity brought them together.'
+                    };
+                }
+            }
+            
+            async fetchHistoricalFact() {
+                try {
+                    const now = new Date();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    
+                    const response = await fetch(`https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/${month}/${day}`);
+                    const data = await response.json();
+                    
+                    if (data && data.events && data.events.length > 0) {
+                        const event = data.events[0]; // Take the first event for simplicity
+                        this.contentData.history = {
+                            year: event.year,
+                            event: event.text,
+                            description: event.pages && event.pages[0] ? event.pages[0].extract : ''
+                        };
+                    } else {
+                         throw new Error("No historical events found for today.");
+                    }
+                } catch (error) {
+                    console.error('Error fetching historical fact:', error);
+                    // Fallback to a static historical fact
+                    const july15thFacts = [
+                        { year: '1099', event: 'The Crusaders captured Jerusalem, ending the First Crusade.', description: 'A pivotal moment in medieval history.' },
+                        { year: '1799', event: 'The Rosetta Stone was found by French soldiers in Rosetta (Rashid), Egypt.', description: 'Key to deciphering Egyptian hieroglyphs.' },
+                        { year: '1965', event: 'Mariner 4 transmits the first close-up pictures of Mars.', description: 'The first successful flyby of Mars by a spacecraft.' }
+                    ];
+                    // Use a simple hash based on date to pick one consistently for the day
+                    const factIndex = now.getDate() % july15thFacts.length; 
+                    this.contentData.history = july15thFacts[factIndex];
+                }
+            }
+            
+            async fetchRandomFact() {
+                try {
+                    const response = await fetch('https://uselessfacts.jsph.pl/random.json?language=en');
+                    const data = await response.json();
+                    
+                    if (data && data.text) {
+                        this.contentData.random = {
+                            fact: data.text,
+                            source: data.source_url || ''
+                        };
+                    } else {
+                        throw new Error("No random fact found.");
+                    }
+                } catch (error) {
+                    console.error('Error fetching random fact:', error);
+                    this.contentData.random = {
+                        fact: 'Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3000 years old and still perfectly edible.',
+                        source: ''
+                    };
+                }
+            }
+            
+            async fetchQuoteOfTheDay() {
+                try {
+                    const response = await fetch('https://zenquotes.io/api/today');
+                    const data = await response.json();
+                    
+                    if (data && data[0]) {
+                        this.contentData.quote = {
+                            text: data[0].q,
+                            author: data[0].a
+                        };
+                    } else {
+                        throw new Error("No quote found.");
+                    }
+                } catch (error) {
+                    console.error('Error fetching quote:', error);
+                    this.contentData.quote = {
+                        text: 'The only way to do great work is to love what you do.',
+                        author: 'Steve Jobs'
+                    };
+                }
+            }
+            
+            // Removed fetchBibleVerseOfTheDay() method
+            
+            displayContent() {
+                const contentType = this.contentTypes[this.currentIndex];
+                const data = this.contentData[contentType.type];
+                
+                if (!data) {
+                    this.showError('Content not available. Please try refreshing.');
+                    return;
+                }
+                
+                const card = document.getElementById('content-card');
+                card.classList.add('sliding-out');
+                
+                setTimeout(() => {
+                    document.getElementById('content-type').textContent = contentType.title;
+                    
+                    switch (contentType.type) {
+                        case 'word':
+                            document.getElementById('content-title').textContent = data.word.toUpperCase();
+                            document.getElementById('content-body').textContent = data.definition;
+                            document.getElementById('content-meta').textContent = data.example;
+                            break;
+                            
+                        case 'history':
+                            document.getElementById('content-title').textContent = data.year;
+                            document.getElementById('content-body').textContent = data.event;
+                            document.getElementById('content-meta').textContent = data.description;
+                            break;
+                            
+                        case 'random':
+                            document.getElementById('content-title').textContent = 'Did You Know?';
+                            document.getElementById('content-body').textContent = data.fact;
+                            document.getElementById('content-meta').textContent = ''; // Random fact doesn't have a specific meta line
+                            break;
+                            
+                        case 'quote':
+                            document.getElementById('content-title').textContent = '"' + data.text + '"';
+                            document.getElementById('content-body').textContent = ''; // Quote body is empty
+                            document.getElementById('content-meta').textContent = '— ' + data.author;
+                            break;
+                        /* Removed Bible case
+                        case 'bible': 
+                            document.getElementById('content-title').textContent = data.reference;
+                            document.getElementById('content-body').textContent = '"' + data.text + '"';
+                            document.getElementById('content-meta').textContent = '';
+                            break;
+                        */
+                    }
+                    
+                    card.classList.remove('sliding-out');
+                    card.classList.add('sliding-in');
+                    
+                    setTimeout(() => {
+                        card.classList.remove('sliding-in');
+                    }, 100); /* Snappier animation */
+                }, 100); /* Snappier animation */
+            }
+            
+            showError(message) {
+                document.getElementById('content-type').textContent = 'Error';
+                document.getElementById('content-title').textContent = '';
+                document.getElementById('content-body').innerHTML = `<span class="error">${message}</span>`;
+                document.getElementById('content-meta').textContent = '';
+            }
+        }
+        
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new DailyContentApp();
+        });
+    </script>
+</body>
+</html>
