@@ -105,10 +105,11 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            transition: transform 0.3s ease, opacity 0.3s ease;
+            transition: transform 0.5s cubic-bezier(0.1, 0.82, 0.25, 1), opacity 0.5s cubic-bezier(0.1, 0.82, 0.25, 1);
             will-change: transform, opacity; /* Optimize for animations */
             backface-visibility: hidden; /* Prevent flickering during animations */
             overflow-y: auto; /* Allow scrolling if content is too long */
+            -webkit-overflow-scrolling: touch; /* Enable momentum scrolling on iOS */
         }
         
         .content-card.active {
@@ -487,9 +488,9 @@
                 carousel.addEventListener('touchend', (e) => {
                     if (!this.isDragging || this.isLoading) return;
                     
-                    // Re-enable transitions
+                    // Re-enable transitions with momentum-based easing
                     this.cards.forEach(card => {
-                        card.style.transition = '';
+                        card.style.transition = 'transform 0.5s cubic-bezier(0.1, 0.82, 0.25, 1), opacity 0.5s cubic-bezier(0.1, 0.82, 0.25, 1)';
                     });
                     
                     this.touchEndX = e.changedTouches[0].clientX;
@@ -499,20 +500,28 @@
                     // Calculate velocity for swipe detection
                     const velocity = Math.abs(deltaX) / duration;
                     
-                    // Determine if swipe should trigger navigation
-                    if (Math.abs(deltaX) > 50 || (Math.abs(deltaX) > 20 && velocity > 0.5)) {
+                    // Determine if swipe should trigger navigation with momentum
+                    // Lower threshold for swipe detection to make it more responsive
+                    if (Math.abs(deltaX) > 30 || velocity > 0.3) {
                         if (deltaX < 0) {
                             this.nextContent();
                         } else {
                             this.prevContent();
                         }
                     } else {
-                        // If not a significant swipe, reset to current position
+                        // If not a significant swipe, animate back to current position with momentum
                         this.updateCardPositions();
                     }
                     
                     this.isDragging = false;
                     e.preventDefault();
+                    
+                    // Reset to default transition after animation completes
+                    setTimeout(() => {
+                        this.cards.forEach(card => {
+                            card.style.transition = '';
+                        });
+                    }, 500); // Match the transition duration
                 }, { passive: false });
             }
             
@@ -814,8 +823,8 @@
                             break;
                             
                         case 'history':
-                            titleEl.textContent = `${data.fullDate}, ${data.year}`;
-                            bodyEl.innerHTML = `<strong>Historical Event:</strong><br>${data.event}`;
+                            titleEl.textContent = data.fullDate; // Remove the year from title
+                            bodyEl.innerHTML = `<strong>Historical Event (${data.year}):</strong><br>${data.event}`;
                             metaEl.textContent = data.description;
                             break;
                             
