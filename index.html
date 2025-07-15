@@ -104,8 +104,8 @@
             height: 350px; /* Standardized fixed height for all cards */
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            transition: transform 0.5s cubic-bezier(0.1, 0.82, 0.25, 1), opacity 0.5s cubic-bezier(0.1, 0.82, 0.25, 1);
+            justify-content: flex-start; /* Align content to top instead of center */
+            transition: transform 0.3s ease, opacity 0.3s ease; /* Simpler transition */
             will-change: transform, opacity; /* Optimize for animations */
             backface-visibility: hidden; /* Prevent flickering during animations */
             overflow-y: auto; /* Allow scrolling if content is too long */
@@ -161,6 +161,8 @@
             margin-bottom: 20px;
             flex-grow: 1; /* Allow body to grow and fill space */
             overflow-y: auto; /* Add scrolling if needed */
+            text-align: left; /* Left-align text for better readability */
+            padding: 0 5px; /* Add a bit of padding */
         }
         
         .content-meta {
@@ -416,6 +418,7 @@
                         <div class="content-title"></div>
                         <div class="content-body">Getting your daily content...</div>
                         <div class="content-meta"></div>
+                        <div class="scroll-hint" style="font-size: 0.7rem; color: #aaa; margin-top: 5px; display: none;">Scroll for more</div>
                     `;
                     carousel.appendChild(card);
                     this.cards.push(card);
@@ -488,40 +491,27 @@
                 carousel.addEventListener('touchend', (e) => {
                     if (!this.isDragging || this.isLoading) return;
                     
-                    // Re-enable transitions with momentum-based easing
+                    // Re-enable simple transitions
                     this.cards.forEach(card => {
-                        card.style.transition = 'transform 0.5s cubic-bezier(0.1, 0.82, 0.25, 1), opacity 0.5s cubic-bezier(0.1, 0.82, 0.25, 1)';
+                        card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
                     });
                     
                     this.touchEndX = e.changedTouches[0].clientX;
                     const deltaX = this.touchEndX - this.touchStartX;
-                    const duration = Date.now() - this.startTime;
                     
-                    // Calculate velocity for swipe detection
-                    const velocity = Math.abs(deltaX) / duration;
-                    
-                    // Determine if swipe should trigger navigation with momentum
-                    // Lower threshold for swipe detection to make it more responsive
-                    if (Math.abs(deltaX) > 30 || velocity > 0.3) {
+                    // Simple swipe detection - no fancy physics
+                    if (Math.abs(deltaX) > 50) { // Increased threshold for more deliberate swipes
                         if (deltaX < 0) {
                             this.nextContent();
                         } else {
                             this.prevContent();
                         }
                     } else {
-                        // If not a significant swipe, animate back to current position with momentum
+                        // If not a significant swipe, reset to current position
                         this.updateCardPositions();
                     }
                     
                     this.isDragging = false;
-                    e.preventDefault();
-                    
-                    // Reset to default transition after animation completes
-                    setTimeout(() => {
-                        this.cards.forEach(card => {
-                            card.style.transition = '';
-                        });
-                    }, 500); // Match the transition duration
                 }, { passive: false });
             }
             
@@ -644,7 +634,6 @@
             }
             
             async fetchWordOfTheDay() {
-                // ... existing code ...
                 try {
                     const dayIndex = new Date().getDay(); 
                     const word = this.wordList[dayIndex % this.wordList.length]; 
@@ -812,6 +801,7 @@
                     const titleEl = card.querySelector('.content-title');
                     const bodyEl = card.querySelector('.content-body');
                     const metaEl = card.querySelector('.content-meta');
+                    const scrollHintEl = card.querySelector('.scroll-hint');
                     
                     typeEl.textContent = contentType.title;
                     
@@ -823,8 +813,8 @@
                             break;
                             
                         case 'history':
-                            titleEl.textContent = data.fullDate; // Remove the year from title
-                            bodyEl.innerHTML = `<strong>Historical Event (${data.year}):</strong><br>${data.event}`;
+                            titleEl.textContent = `${data.fullDate}, ${data.year}`; /* Show full date with year in title */
+                            bodyEl.innerHTML = `<strong>Historical Event:</strong><br>${data.event}`;
                             metaEl.textContent = data.description;
                             break;
                             
@@ -841,7 +831,16 @@
                             break;
                     }
                 });
-            }
+                
+                // Check if content is scrollable and show hint if needed
+                setTimeout(() => {
+                    if (bodyEl.scrollHeight > bodyEl.clientHeight) {
+                        scrollHintEl.style.display = 'block';
+                    } else {
+                        scrollHintEl.style.display = 'none';
+                    }
+                }, 100); // Small delay to ensure content is rendered
+            };
             
             showErrorOnCard(card, message) {
                 const typeEl = card.querySelector('.content-type');
