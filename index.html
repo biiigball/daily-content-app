@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
     <title>Daily Content</title>
 
     <!-- Favicon block: wide browser support -->
@@ -294,7 +294,10 @@
             
             .content-meta {
                 font-size: 0.8rem;
-                max-height: 60px; /* Smaller max height for mobile */
+                max-height: none;
+                flex-grow: 1;
+                min-height: 0;
+                overflow-y: auto;
             }
 
             .swipe-hint {
