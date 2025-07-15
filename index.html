@@ -5,10 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Daily Content</title>
     
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Daily Content">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f8f9fa'/><text x='50' y='55' font-family='Arial' font-size='30' text-anchor='middle' fill='%23333'>DC</text></svg>">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"> 
+
+    <link rel="manifest" href="/site.webmanifest">
     
     <style>
         * {
@@ -69,7 +74,6 @@
             justify-content: center; /* Horizontally center */
             position: relative;
             overflow: hidden; /* For transition effects */
-            /* No padding-bottom here, let container manage its space */
         }
         
         .content-card {
@@ -138,8 +142,8 @@
             font-size: 0.75rem;
             color: #aaa;
             opacity: 0.7;
-            margin-top: 10px;
-            margin-bottom: 10px;
+            margin-top: 10px; /* Adjusted position */
+            margin-bottom: 10px; /* Adjusted position */
         }
 
         .navigation {
@@ -266,7 +270,8 @@
                     { type: 'word', title: 'Word of the Day' },
                     { type: 'history', title: 'Historical Fact' },
                     { type: 'random', title: 'Random Fact' },
-                    { type: 'quote', title: 'Quote of the Day' }
+                    { type: 'quote', title: 'Quote of the Day' },
+                    { type: 'bible', title: 'Bible Verse of the Day' }
                 ];
                 this.contentData = {};
                 this.isLoading = false;
@@ -477,7 +482,8 @@
                         this.fetchWordOfTheDay(),
                         this.fetchHistoricalFact(),
                         this.fetchRandomFact(),
-                        this.fetchQuoteOfTheDay()
+                        this.fetchQuoteOfTheDay(),
+                        this.fetchBibleVerseOfTheDay()
                     ]);
                     
                 } catch (error) {
@@ -594,6 +600,28 @@
                     };
                 }
             }
+
+            async fetchBibleVerseOfTheDay() {
+                try {
+                    const response = await fetch('https://beta.ourmanna.com/api/v1/get?format=json&order=daily');
+                    const data = await response.json();
+                    
+                    if (data && data.verse && data.verse.details) {
+                        this.contentData.bible = {
+                            text: data.verse.details.text,
+                            reference: data.verse.details.reference
+                        };
+                    } else {
+                        throw new Error("No Bible verse found.");
+                    }
+                } catch (error) {
+                    console.error('Error fetching Bible verse:', error);
+                    this.contentData.bible = {
+                        text: 'For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life.',
+                        reference: 'John 3:16'
+                    };
+                }
+            }
             
             displayContent() {
                 const contentType = this.contentTypes[this.currentIndex];
@@ -633,6 +661,12 @@
                             document.getElementById('content-title').textContent = '"' + data.text + '"';
                             document.getElementById('content-body').textContent = '';
                             document.getElementById('content-meta').textContent = '— ' + data.author;
+                            break;
+
+                        case 'bible':
+                            document.getElementById('content-title').textContent = data.reference;
+                            document.getElementById('content-body').textContent = '"' + data.text + '"';
+                            document.getElementById('content-meta').textContent = '';
                             break;
                     }
                     
