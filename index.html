@@ -85,29 +85,49 @@
             max-width: 400px;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.15s ease, opacity 0.15s ease; /* Even snappier animation */
+            transition: transform 0.15s ease, opacity 0.15s ease; /* Snappier animation */
             user-select: none;
             position: relative;
             min-height: 300px; /* Default min-height */
             display: flex;
             flex-direction: column;
             justify-content: center;
+            /* Default state */
+            transform: translateX(0);
+            opacity: 1;
         }
         
         .content-card:hover {
             transform: translateY(-2px);
         }
         
-        .content-card.sliding-out {
+        /* New animation classes for directional sliding */
+        .content-card.slide-out-left {
             transform: translateX(-100%);
             opacity: 0;
         }
         
-        .content-card.sliding-in {
+        .content-card.slide-out-right {
             transform: translateX(100%);
             opacity: 0;
         }
         
+        .content-card.slide-in-left {
+            transform: translateX(-100%); /* Start off-screen left */
+            opacity: 0;
+        }
+        
+        .content-card.slide-in-right {
+            transform: translateX(100%); /* Start off-screen right */
+            opacity: 0;
+        }
+        
+        /* This class is applied after content update and then removed to trigger entry animation */
+        .content-card.active-transition { 
+             transform: translateX(0); /* Target state for new card */
+             opacity: 1;
+        }
+
         .content-type {
             font-size: 0.8rem;
             color: #666;
@@ -142,25 +162,25 @@
             font-size: 0.75rem;
             color: #aaa;
             opacity: 0.7;
-            margin-top: 10px; /* Adjusted position */
-            margin-bottom: 10px; /* Adjusted position */
+            margin-top: 10px; 
+            margin-bottom: 10px; 
         }
 
         .navigation {
             display: flex;
             justify-content: center;
-            margin-top: 15px; /* Space above dots */
+            margin-top: 15px; 
             gap: 10px;
-            z-index: 10; /* Ensure dots are on top */
-            position: relative; /* Needed for z-index to work against normal flow */
+            z-index: 10; 
+            position: relative; 
         }
         
         .nav-dot {
-            width: 16px; /* Larger dots for better visibility */
-            height: 16px; /* Larger dots */
+            width: 16px; 
+            height: 16px; 
             border-radius: 50%;
             background-color: #bbb;
-            border: 2px solid #ccc; /* Thicker border for definition */
+            border: 2px solid #ccc; 
             cursor: pointer;
             transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease;
         }
@@ -188,13 +208,13 @@
         
         @media (max-width: 480px) { /* Styles specifically for iPhone screens */
             .container {
-                padding: 10px; /* Minimal padding to ensure full screen usage */
+                padding: 10px; 
             }
             
             .content-card {
-                max-width: 300px; /* Make the card significantly smaller */
-                padding: 20px 15px; /* Adjust padding for smaller card */
-                min-height: 180px; /* Smaller min-height */
+                max-width: 300px; 
+                padding: 20px 15px; 
+                min-height: 180px; 
                 margin-top: -30px; /* Move card up from center */
             }
             
@@ -213,12 +233,12 @@
             }
             
             .content-title {
-                font-size: 1.0rem; /* Slightly smaller */
+                font-size: 1.0rem; 
                 margin-bottom: 15px;
             }
             
             .content-body {
-                font-size: 0.85rem; /* Smaller body text */
+                font-size: 0.85rem; 
                 line-height: 1.5;
                 margin-bottom: 15px;
             }
@@ -228,13 +248,13 @@
             }
 
             .swipe-hint {
-                font-size: 0.65rem; /* Smallest on tiny screens */
-                margin-top: auto; /* Push it to bottom if space allows */
+                font-size: 0.65rem; 
+                margin-top: auto; 
                 margin-bottom: 5px;
             }
 
             .navigation {
-                margin-top: 5px; /* Minimal space above dots on small screens */
+                margin-top: 5px; 
             }
         }
     </style>
@@ -277,7 +297,7 @@
                 this.isLoading = false;
                 this.touchStartX = 0;
                 this.touchEndX = 0;
-                this.isSwiping = false; // Flag to prevent click from firing after swipe
+                this.isSwiping = false; 
                 
                 // Hardcoded word list for daily rotation
                 this.wordList = [
@@ -302,18 +322,16 @@
                 if (cachedData) {
                     try {
                         this.contentData = JSON.parse(cachedData);
-                        // Validate content types exist in cached data for current app version
-                        // This prevents issues if you remove a content type later but old cache exists
                         for (const typeDef of this.contentTypes) {
                             if (!this.contentData[typeDef.type]) {
                                 console.warn(`Cached data missing content for type: ${typeDef.type}. Refetching all.`);
-                                return false; // Force re-fetch if any type is missing
+                                return false; 
                             }
                         }
                         return true;
                     } catch (error) {
                         console.error('Error parsing cached data:', error);
-                        localStorage.removeItem(`dailyContent_${todayKey}`); // Clear bad cache
+                        localStorage.removeItem(`dailyContent_${todayKey}`); 
                     }
                 }
                 return false;
@@ -324,8 +342,6 @@
                 const todayKey = this.getTodayKey();
                 try {
                     localStorage.setItem(`dailyContent_${todayKey}`, JSON.stringify(this.contentData));
-                    
-                    // Clean up old cached data (keep only today's)
                     this.cleanupOldCache();
                 } catch (error) {
                     console.error('Error saving cached data:', error);
@@ -343,25 +359,22 @@
                         keysToRemove.push(key);
                     }
                 }
-                
                 keysToRemove.forEach(key => localStorage.removeItem(key));
             }
             
             init() {
                 this.updateDate();
                 this.setupEventListeners();
-                this.updateNavigation(); // Ensure dots are correct on init
+                this.updateNavigation(); 
                 
-                // Try to load cached data first
                 if (this.loadCachedData()) {
                     console.log('Loaded cached data for today');
-                    this.displayContent();
+                    this.displayContent('initial'); // Display without animation on initial load
                 } else {
                     console.log('No cached data found, fetching fresh content');
-                    // Fetch and then save once all promises are resolved
                     this.loadAllContent().then(() => {
-                        this.saveCachedData(); // Save content only after ALL fetches are successful
-                        this.displayContent();
+                        this.saveCachedData(); 
+                        this.displayContent('initial'); // Display without animation on initial load
                     });
                 }
             }
@@ -379,24 +392,19 @@
             
             setupEventListeners() {
                 const card = document.getElementById('content-card');
-                const dotsContainer = document.querySelector('.navigation'); // Target the container for dots
+                const dotsContainer = document.querySelector('.navigation'); 
                 
-                // CLICK ANYWHERE on the body to go to next content, but exclude dot clicks
                 document.body.addEventListener('click', (e) => {
                     if (this.isLoading || this.isSwiping) {
-                        this.isSwiping = false; // Reset swipe flag
+                        this.isSwiping = false; 
                         return;
                     }
-                    // Check if the click target or any of its parents is a nav-dot
                     if (e.target.closest('.nav-dot')) {
-                        // This click is on a dot, so let the dot's own handler take over
                         return;
                     }
-                    // Otherwise, it's a general click, advance content
                     this.nextContent();
                 });
                 
-                // Dot navigation listener (delegated to container for efficiency)
                 dotsContainer.addEventListener('click', (e) => {
                     const dot = e.target.closest('.nav-dot');
                     if (dot && dot.dataset.index) {
@@ -404,28 +412,21 @@
                     }
                 });
                 
-                // Touch navigation
                 card.addEventListener('touchstart', (e) => {
                     this.touchStartX = e.changedTouches[0].screenX;
-                    this.isSwiping = false; // Reset
+                    this.isSwiping = false; 
                 }, { passive: true });
                 
-                card.addEventListener('touchmove', (e) => {
-                    // This can be used to detect if a significant swipe has occurred
-                    // before touchend, setting isSwiping to true if so.
-                    // For simplicity, we'll set isSwiping in touchend if swipe threshold is met.
-                }, { passive: true });
-
                 card.addEventListener('touchend', (e) => {
                     this.touchEndX = e.changedTouches[0].screenX;
-                    if (this.handleSwipe()) { // handleSwipe now returns true if a swipe occurred
-                        this.isSwiping = true; // Mark as swiping to prevent click event
+                    if (this.handleSwipe()) { 
+                        this.isSwiping = true; 
                     }
                 }, { passive: true });
             }
             
             handleSwipe() {
-                const swipeThreshold = 50; // Pixels
+                const swipeThreshold = 50; 
                 const diff = this.touchStartX - this.touchEndX;
                 
                 if (Math.abs(diff) > swipeThreshold) {
@@ -434,32 +435,49 @@
                     } else { // Swiped right (show previous)
                         this.prevContent();
                     }
-                    return true; // Indicate a swipe occurred
+                    return true; 
                 }
-                return false; // No significant swipe
+                return false; 
             }
             
             nextContent() {
                 if (this.isLoading) return;
-                this.goToContent((this.currentIndex + 1) % this.contentTypes.length);
+                const newIndex = (this.currentIndex + 1) % this.contentTypes.length;
+                this.goToContent(newIndex, 'forward');
             }
             
             prevContent() {
                 if (this.isLoading) return;
-                this.goToContent((this.currentIndex - 1 + this.contentTypes.length) % this.contentTypes.length);
+                const newIndex = (this.currentIndex - 1 + this.contentTypes.length) % this.contentTypes.length;
+                this.goToContent(newIndex, 'backward');
             }
             
-            goToContent(index) {
+            goToContent(index, direction = 'forward') {
                 if (this.isLoading || index === this.currentIndex) return;
                 
+                const prevIndex = this.currentIndex;
                 this.currentIndex = index;
                 this.updateNavigation();
-                this.displayContent();
+                
+                // Determine direction for animation more precisely
+                // If direct dot click, calculate direction based on index difference
+                if (direction === 'forward' && index < prevIndex) { // E.g., from last dot to first dot
+                    direction = 'forward';
+                } else if (direction === 'backward' && index > prevIndex) { // E.g., from first dot to last dot
+                    direction = 'backward';
+                } else if (index > prevIndex) {
+                    direction = 'forward';
+                } else if (index < prevIndex) {
+                    direction = 'backward';
+                }
+                // If indexes are equal, no change, or 'initial' state handled by displayContent
+
+                this.displayContent(direction);
             }
             
             updateNavigation() {
                 const navContainer = document.querySelector('.navigation');
-                navContainer.innerHTML = ''; // Clear existing dots
+                navContainer.innerHTML = ''; 
                 this.contentTypes.forEach((_, index) => {
                     const dot = document.createElement('div');
                     dot.classList.add('nav-dot');
@@ -475,9 +493,7 @@
             
             async loadAllContent() {
                 this.isLoading = true;
-                
                 try {
-                    // Fetch all content types concurrently
                     await Promise.all([
                         this.fetchWordOfTheDay(),
                         this.fetchHistoricalFact(),
@@ -485,7 +501,6 @@
                         this.fetchQuoteOfTheDay(),
                         this.fetchBibleVerseOfTheDay()
                     ]);
-                    
                 } catch (error) {
                     console.error('Error loading content:', error);
                     this.showError('Failed to load content. Please try again later.');
@@ -496,8 +511,8 @@
             
             async fetchWordOfTheDay() {
                 try {
-                    const dayIndex = new Date().getDay(); // 0 for Sunday, 1 for Monday, etc.
-                    const word = this.wordList[dayIndex % this.wordList.length]; // Ensure it cycles through the list
+                    const dayIndex = new Date().getDay(); 
+                    const word = this.wordList[dayIndex % this.wordList.length]; 
                     
                     const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
                     const data = await response.json();
@@ -546,7 +561,7 @@
                     }
                 } catch (error) {
                     console.error('Error fetching historical fact:', error);
-                    const now = new Date(); // Re-declare for scope inside catch
+                    const now = new Date(); 
                     const july15thFacts = [
                         { year: '1099', event: 'The Crusaders captured Jerusalem, ending the First Crusade.', description: 'A pivotal moment in medieval history.' },
                         { year: '1799', event: 'The Rosetta Stone was found by French soldiers in Rosetta (Rashid), Egypt.', description: 'Key to deciphering Egyptian hieroglyphs.' },
@@ -623,60 +638,82 @@
                 }
             }
             
-            displayContent() {
+            displayContent(direction = 'forward') { // Default to 'forward' for general navigation
                 const contentType = this.contentTypes[this.currentIndex];
                 const data = this.contentData[contentType.type];
-                
+                const card = document.getElementById('content-card');
+            
                 if (!data) {
                     this.showError('Content not available. Please try refreshing.');
                     return;
                 }
-                
-                const card = document.getElementById('content-card');
-                card.classList.add('sliding-out');
-                
+            
+                // Step 1: Animate the current card out
+                if (direction !== 'initial') { // Skip animation on first load
+                    card.classList.remove('active-transition'); // Ensure no lingering transition class
+                    if (direction === 'forward') {
+                        card.classList.add('slide-out-left');
+                    } else {
+                        card.classList.add('slide-out-right');
+                    }
+                }
+            
+                // Step 2: Update content after a short delay (for exit animation to start)
+                // If initial load, update immediately
+                const updateDelay = (direction === 'initial') ? 0 : 80; 
+            
                 setTimeout(() => {
-                    document.getElementById('content-type').textContent = contentType.title;
+                    // Reset card position and opacity before updating content
+                    card.classList.remove('slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right');
                     
+                    document.getElementById('content-type').textContent = contentType.title;
                     switch (contentType.type) {
                         case 'word':
                             document.getElementById('content-title').textContent = data.word.toUpperCase();
                             document.getElementById('content-body').textContent = data.definition;
                             document.getElementById('content-meta').textContent = data.example;
                             break;
-                            
                         case 'history':
                             document.getElementById('content-title').textContent = data.year;
                             document.getElementById('content-body').textContent = data.event;
                             document.getElementById('content-meta').textContent = data.description;
                             break;
-                            
                         case 'random':
                             document.getElementById('content-title').textContent = 'Did You Know?';
                             document.getElementById('content-body').textContent = data.fact;
                             document.getElementById('content-meta').textContent = '';
                             break;
-                            
                         case 'quote':
                             document.getElementById('content-title').textContent = '"' + data.text + '"';
                             document.getElementById('content-body').textContent = '';
                             document.getElementById('content-meta').textContent = '— ' + data.author;
                             break;
-
                         case 'bible':
                             document.getElementById('content-title').textContent = data.reference;
                             document.getElementById('content-body').textContent = '"' + data.text + '"';
                             document.getElementById('content-meta').textContent = '';
                             break;
                     }
-                    
-                    card.classList.remove('sliding-out');
-                    card.classList.add('sliding-in');
-                    
-                    setTimeout(() => {
-                        card.classList.remove('sliding-in');
-                    }, 80); /* Very snappier animation */
-                }, 80); /* Very snappier animation */
+            
+                    // Step 3: Animate the new content in
+                    if (direction !== 'initial') {
+                        if (direction === 'forward') {
+                            card.classList.add('slide-in-right');
+                        } else {
+                            card.classList.add('slide-in-left');
+                        }
+                        // Trigger reflow to ensure the 'slide-in' class is applied before the 'active-transition' takes effect
+                        card.offsetWidth; 
+                        card.classList.add('active-transition'); // Trigger transition to final position
+                        setTimeout(() => {
+                            // Clean up after animation
+                            card.classList.remove('slide-in-left', 'slide-in-right');
+                        }, 150); // Match CSS transition duration
+                    } else {
+                         // For initial load, ensure it's in default state
+                         card.classList.add('active-transition');
+                    }
+                }, updateDelay);
             }
             
             showError(message) {
@@ -687,7 +724,6 @@
             }
         }
         
-        // Initialize the app when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
             new DailyContentApp();
         });
