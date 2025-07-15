@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
     <title>Daily Content</title>
 
-    <!-- Favicon block: wide browser support -->
+    <!-- Favicon block -->
     <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -15,405 +15,444 @@
 
     <!-- iOS PWA meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Daily Content">
     
     <style>
+        :root {
+            --primary-color: #007AFF;
+            --secondary-color: #5856D6;
+            --background-color: #000000;
+            --surface-color: #1C1C1E;
+            --card-color: #2C2C2E;
+            --text-primary: #FFFFFF;
+            --text-secondary: #8E8E93;
+            --text-tertiary: #636366;
+            --accent-color: #FF9500;
+            --success-color: #30D158;
+            --border-radius: 20px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --blur-bg: rgba(28, 28, 30, 0.8);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         
         html, body {
-            height: 100%; /* Ensure html and body take full viewport height */
+            height: 100%;
             margin: 0;
             padding: 0;
+            overflow: hidden;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: #f8f9fa;
-            color: #333;
-            line-height: 1.6;
-            overflow: hidden; /* Prevent scrolling if content overflows */
-            /* iOS safe area support */
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, var(--background-color) 0%, #1a1a1a 100%);
+            color: var(--text-primary);
+            line-height: 1.5;
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
         
-        .container {
+        .app-container {
             display: flex;
             flex-direction: column;
-            height: 100%; /* Take full height of body (minus safe areas) */
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 20px; /* Default padding for larger screens */
+            height: 100vh;
+            position: relative;
+        }
+        
+        .status-bar {
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            padding-top: 20px;
+            padding: 20px 24px 16px;
+            background: var(--blur-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .header h1 {
-            font-size: 1.8rem;
-            font-weight: 300;
-            color: #555;
-            margin-bottom: 10px;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
         }
         
         .date {
-            font-size: 0.9rem;
-            color: #888;
-            font-weight: 300;
+            font-size: 15px;
+            color: var(--text-secondary);
+            font-weight: 500;
         }
         
-        .content-container {
-            flex: 1; /* Allows it to take available vertical space */
-            display: flex;
-            align-items: center; /* Vertically center */
-            justify-content: center; /* Horizontally center */
+        .content-area {
+            flex: 1;
             position: relative;
-            overflow: visible; /* Changed to visible to show adjacent cards */
-            perspective: 1000px; /* Add perspective for 3D effect */
-            width: 100%;
+            overflow: hidden;
+            padding: 0 16px;
         }
         
-        .carousel {
+        .carousel-container {
             position: relative;
             width: 100%;
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
+            perspective: 1200px;
         }
         
         .content-card {
-            background: white;
-            border-radius: 16px;
-            padding: 40px 30px; /* Default padding */
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            width: 100%;
-            max-width: 400px;
-            min-height: 400px;
-            text-align: center;
-            cursor: pointer;
-            user-select: none;
             position: absolute;
-            height: 85vh; /* Fill most of the viewport height */
+            width: calc(100% - 32px);
+            max-width: 380px;
+            height: calc(100% - 40px);
+            background: var(--card-color);
+            border-radius: var(--border-radius);
+            padding: 32px 24px 24px;
+            box-shadow: var(--shadow);
             display: flex;
             flex-direction: column;
-            /* Ensure children can grow to fill vertical space */
-            justify-content: flex-start;
-            transition: transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.4s ease; /* Smoother transition */
-            will-change: transform, opacity; /* Optimize for animations */
-            backface-visibility: hidden; /* Prevent flickering during animations */
-            overflow-y: hidden; /* Remove free scrolling */
-            -webkit-overflow-scrolling: touch; /* Enable momentum scrolling on iOS */
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .content-card.active {
-            z-index: 3;
-            transform: translateX(0) scale(1);
+            z-index: 10;
+            transform: translateX(0) scale(1) rotateY(0deg);
             opacity: 1;
         }
         
         .content-card.prev {
-            z-index: 2;
-            transform: translateX(-70%) scale(0.85);
-            opacity: 0.3; /* Reduced visibility */
+            z-index: 5;
+            transform: translateX(-85%) scale(0.85) rotateY(15deg);
+            opacity: 0.4;
         }
         
         .content-card.next {
-            z-index: 2;
-            transform: translateX(70%) scale(0.85);
-            opacity: 0.3; /* Reduced visibility */
+            z-index: 5;
+            transform: translateX(85%) scale(0.85) rotateY(-15deg);
+            opacity: 0.4;
         }
         
         .content-card.inactive {
             z-index: 1;
             opacity: 0;
             pointer-events: none;
+            transform: scale(0.7);
         }
         
         .content-type {
-            font-size: 0.8rem;
-            color: #666;
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary-color);
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-            font-weight: 500;
-            white-space: nowrap; /* Prevent wrapping */
-            overflow: visible; /* Ensure text is fully visible */
+            letter-spacing: 1.2px;
+            background: rgba(0, 122, 255, 0.15);
+            padding: 6px 12px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            align-self: flex-start;
+            border: 1px solid rgba(0, 122, 255, 0.3);
         }
         
         .content-title {
-            font-size: 1.4rem;
-            color: #333;
-            margin-bottom: 10px; /* Reduce gap below title */
-            font-weight: 600;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            line-height: 1.3;
+            letter-spacing: -0.5px;
         }
         
         .content-body {
-            font-size: 1rem;
-            color: #555;
-            line-height: 1.7;
-            margin-bottom: 0;
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 20px;
             flex-shrink: 0;
-            overflow-y: auto; /* Add scrolling if needed */
-            text-align: left; /* Left-align text for better readability */
-            padding: 0 5px; /* Add a bit of padding */
-            max-height: 150px; /* Set a max height to ensure scrollability */
+            max-height: 120px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .content-meta {
-    flex-grow: 1;
-    overflow-y: auto;
-    min-height: 0;
-    margin-top: 10px;
-    line-height: 1.7;
-    color: #444;
-    text-align: left;
-}
+            flex: 1;
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-right: 8px;
+        }
         
-        .swipe-hint {
-            text-align: center;
-            font-size: 0.75rem;
-            color: #aaa;
-            opacity: 0.7;
-            margin-top: 10px; 
-            margin-bottom: 10px; 
+        .content-meta::-webkit-scrollbar {
+            width: 3px;
         }
-
-        .scroll-hint {
-            text-align: center;
-            font-size: 0.7rem;
-            color: #aaa;
-            margin-top: 5px;
-            padding: 3px 0;
-            border-top: 1px dotted #eee;
-            animation: pulse 2s infinite;
+        
+        .content-meta::-webkit-scrollbar-track {
+            background: transparent;
         }
-
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
+        
+        .content-meta::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
         }
-
+        
+        .bottom-controls {
+            padding: 16px 24px 20px;
+            background: var(--blur-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
         .navigation {
             display: flex;
             justify-content: center;
-            margin-top: 15px; 
-            gap: 10px;
-            z-index: 10; 
-            position: relative; 
+            gap: 12px;
+            margin-bottom: 12px;
         }
         
         .nav-dot {
-            width: 16px; 
-            height: 16px; 
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background-color: #bbb;
-            border: 2px solid #ccc; 
+            background: var(--text-tertiary);
             cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
         }
         
         .nav-dot.active {
-            background-color: #007AFF;
-            border-color: #007AFF;
-            transform: scale(1.15);
+            background: var(--primary-color);
+            transform: scale(1.5);
         }
         
-        .nav-dot:hover:not(.active) {
-            background-color: #999;
-            border-color: #aaa;
+        .nav-dot.active::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: pulse 2s infinite;
         }
         
-        .loading {
-            color: #888;
-            font-size: 0.9rem;
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.2); opacity: 0.1; }
+            100% { transform: scale(1); opacity: 0.3; }
         }
         
-        .error {
-            color: #ff6b6b;
-            font-size: 0.9rem;
+        .swipe-hint {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-tertiary);
+            font-weight: 500;
+            opacity: 0.8;
         }
         
-        @media (max-width: 480px) { /* Styles specifically for iPhone screens */
-            .container {
-                padding: 10px; 
-            }
-            
-            .content-card {
-                max-width: 98vw;
-                padding: 20px 15px; 
-                height: 88vh; /* Even taller on mobile */
-                min-height: 350px;
-                margin-top: -30px; /* Move card up from center */
-            }
-            
-            .content-card.prev {
-                transform: translateX(-60%) scale(0.85);
-                opacity: 0.2; /* Even less visible on mobile */
-            }
-            
-            .content-card.next {
-                transform: translateX(60%) scale(0.85);
-                opacity: 0.2; /* Even less visible on mobile */
-            }
-            
-            .header h1 {
-                font-size: 1.3rem;
-                margin-bottom: 5px;
-            }
-            
-            .date {
-                font-size: 0.8rem;
-            }
-            
-            .content-type {
-                font-size: 0.75rem;
-                margin-bottom: 15px;
-            }
-            
-            .content-title {
-                font-size: 1.0rem; 
-                margin-bottom: 15px;
-            }
-            
-            .content-body {
-                font-size: 0.85rem; 
-                line-height: 1.5;
-                margin-bottom: 15px;
-                max-height: 100px; /* Smaller max height for mobile */
-            }
-            
-            .content-meta {
-                font-size: 0.8rem;
-                max-height: none;
-                flex-grow: 1;
-                min-height: 0;
-                overflow-y: auto;
-            }
-
-            .swipe-hint {
-                font-size: 0.65rem; 
-                margin-top: auto; 
-                margin-bottom: 5px;
-            }
-
-            .navigation {
-                margin-top: 5px; 
-            }
-
-            .scroll-hint {
-                font-size: 0.65rem;
-            }
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+        }
+        
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(0, 122, 255, 0.2);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 500;
+        }
+        
+        .error-state {
+            color: #FF453A;
+            text-align: center;
+            padding: 20px;
+            font-size: 15px;
+        }
+        
+        .gesture-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 20;
+            pointer-events: none;
+        }
+        
+        .haptic-feedback {
+            animation: haptic 0.1s ease-out;
+        }
+        
+        @keyframes haptic {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.98); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Dynamic Island simulation */
+        .dynamic-island {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 32px;
+            background: var(--background-color);
+            border-radius: 16px;
+            z-index: 100;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Smooth scroll behavior */
+        .content-body, .content-meta {
+            scroll-behavior: smooth;
+        }
+        
+        /* Enhanced touch targets */
+        .nav-dot {
+            padding: 8px;
+            margin: -8px;
+        }
+        
+        /* Improved readability */
+        .content-body, .content-meta {
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="app-container">
+        <div class="dynamic-island"></div>
+        
+        <div class="status-bar"></div>
+        
         <div class="header">
             <h1>Daily Content</h1>
             <div class="date" id="current-date"></div>
         </div>
         
-        <div class="content-container">
-            <div class="carousel" id="carousel">
+        <div class="content-area">
+            <div class="carousel-container" id="carousel">
                 <!-- Cards will be dynamically created here -->
             </div>
+            <div class="gesture-overlay" id="gestureOverlay"></div>
         </div>
         
-        <div class="swipe-hint">Tap or swipe to navigate</div>
-
-        <div class="navigation">
-            </div>
-        
+        <div class="bottom-controls">
+            <div class="navigation" id="navigation"></div>
+            <div class="swipe-hint">Swipe or tap to explore</div>
+        </div>
     </div>
 
     <script>
-        class DailyContentApp {
+        class ModernDailyContentApp {
             constructor() {
                 this.currentIndex = 0;
                 this.contentTypes = [
-                    { type: 'word', title: 'Word of the Day' },
-                    { type: 'history', title: 'Historical Fact' },
-                    { type: 'random', title: 'Random Fact' },
-                    { type: 'quote', title: 'Quote of the Day' }
+                    { type: 'word', title: 'Word of the Day', icon: '📚' },
+                    { type: 'history', title: 'Historical Moment', icon: '🏛️' },
+                    { type: 'random', title: 'Amazing Fact', icon: '🌟' },
+                    { type: 'quote', title: 'Daily Inspiration', icon: '💭' }
                 ];
                 this.contentData = {};
                 this.isLoading = false;
-                this.touchStartX = 0;
-                this.touchMoveX = 0;
-                this.touchEndX = 0;
-                this.isSwiping = false;
-                this.isDragging = false;
-                this.startTime = 0;
                 this.cards = [];
+                this.touchStartX = 0;
+                this.touchStartY = 0;
+                this.isDragging = false;
+                this.dragThreshold = 50;
                 
-                // Hardcoded word list for daily rotation
                 this.wordList = [
                     'serendipity', 'ephemeral', 'petrichor', 'luminous', 'mellifluous',
-                    'ethereal', 'tranquil', 'vivacious', 'ubiquitous', 'cacophony'
+                    'ethereal', 'tranquil', 'vivacious', 'ubiquitous', 'cacophony',
+                    'eloquent', 'pristine', 'resilient', 'magnificent', 'harmonious'
                 ];
                 
                 this.init();
             }
             
-            // Get today's date as a string for localStorage key
             getTodayKey() {
                 const today = new Date();
                 return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
             
-            // Check if we have cached data for today
             loadCachedData() {
                 const todayKey = this.getTodayKey();
-                const cachedData = localStorage.getItem(`dailyContent_${todayKey}`);
+                const cachedData = localStorage.getItem(`modernDailyContent_${todayKey}`);
                 
                 if (cachedData) {
                     try {
                         this.contentData = JSON.parse(cachedData);
-                        // Validate content types exist in cached data for current app version
-                        for (const typeDef of this.contentTypes) {
-                            if (!this.contentData[typeDef.type]) {
-                                console.warn(`Cached data missing content for type: ${typeDef.type}. Refetching all.`);
-                                return false; 
-                            }
-                        }
-                        return true;
+                        return this.contentTypes.every(type => this.contentData[type.type]);
                     } catch (error) {
                         console.error('Error parsing cached data:', error);
-                        localStorage.removeItem(`dailyContent_${todayKey}`); 
+                        localStorage.removeItem(`modernDailyContent_${todayKey}`);
                     }
                 }
                 return false;
             }
             
-            // Save today's content to localStorage
             saveCachedData() {
                 const todayKey = this.getTodayKey();
                 try {
-                    localStorage.setItem(`dailyContent_${todayKey}`, JSON.stringify(this.contentData));
+                    localStorage.setItem(`modernDailyContent_${todayKey}`, JSON.stringify(this.contentData));
                     this.cleanupOldCache();
                 } catch (error) {
                     console.error('Error saving cached data:', error);
                 }
             }
             
-            // Remove cached data from previous days
             cleanupOldCache() {
                 const todayKey = this.getTodayKey();
                 const keysToRemove = [];
                 
                 for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
-                    if (key && key.startsWith('dailyContent_') && key !== `dailyContent_${todayKey}`) {
+                    if (key && key.startsWith('modernDailyContent_') && key !== `modernDailyContent_${todayKey}`) {
                         keysToRemove.push(key);
                     }
                 }
@@ -424,16 +463,16 @@
                 this.updateDate();
                 this.createCards();
                 this.setupEventListeners();
-                this.updateNavigation(); 
+                this.updateNavigation();
                 
                 if (this.loadCachedData()) {
                     console.log('Loaded cached data for today');
-                    this.updateCarousel(); // Display without animation on initial load
+                    this.updateCarousel();
                 } else {
-                    console.log('No cached data found, fetching fresh content');
+                    console.log('Fetching fresh content');
                     this.loadAllContent().then(() => {
-                        this.saveCachedData(); 
-                        this.updateCarousel(); // Display without animation on initial load
+                        this.saveCachedData();
+                        this.updateCarousel();
                     });
                 }
             }
@@ -442,22 +481,24 @@
                 const carousel = document.getElementById('carousel');
                 carousel.innerHTML = '';
                 
-                // Create a card for each content type
-                this.contentTypes.forEach((_, index) => {
+                this.contentTypes.forEach((contentType, index) => {
                     const card = document.createElement('div');
                     card.classList.add('content-card');
                     card.innerHTML = `
-                        <div class="content-type">Loading...</div>
+                        <div class="content-type">${contentType.icon} Loading...</div>
                         <div class="content-title"></div>
-                        <div class="content-body">Getting your daily content...</div>
+                        <div class="content-body">
+                            <div class="loading-state">
+                                <div class="loading-spinner"></div>
+                                <div class="loading-text">Getting your daily content...</div>
+                            </div>
+                        </div>
                         <div class="content-meta"></div>
-                        <div class="scroll-hint" style="display: none;">Scroll for more</div>
                     `;
                     carousel.appendChild(card);
                     this.cards.push(card);
                 });
                 
-                // Set initial positions
                 this.updateCardPositions();
             }
             
@@ -474,79 +515,90 @@
             
             setupEventListeners() {
                 const carousel = document.getElementById('carousel');
-                const dotsContainer = document.querySelector('.navigation');
+                const navigation = document.getElementById('navigation');
                 
-                // Tap navigation: left = prev, right = next
-                carousel.addEventListener('click', (e) => {
-                    if (this.isLoading) return;
-                    const rect = carousel.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    if (x < rect.width / 2) {
+                // Touch events for swiping
+                carousel.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: true });
+                carousel.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+                carousel.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: true });
+                
+                // Click events for navigation
+                carousel.addEventListener('click', this.handleClick.bind(this));
+                navigation.addEventListener('click', this.handleDotClick.bind(this));
+                
+                // Prevent context menu on long press
+                carousel.addEventListener('contextmenu', e => e.preventDefault());
+            }
+            
+            handleTouchStart(e) {
+                if (this.isLoading) return;
+                
+                this.touchStartX = e.touches[0].clientX;
+                this.touchStartY = e.touches[0].clientY;
+                this.isDragging = false;
+                
+                // Add haptic feedback class
+                document.body.classList.add('haptic-feedback');
+                setTimeout(() => document.body.classList.remove('haptic-feedback'), 100);
+            }
+            
+            handleTouchMove(e) {
+                if (this.isLoading) return;
+                
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                const deltaX = touchX - this.touchStartX;
+                const deltaY = touchY - this.touchStartY;
+                
+                // Determine if this is a horizontal swipe
+                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+                    e.preventDefault();
+                    this.isDragging = true;
+                }
+            }
+            
+            handleTouchEnd(e) {
+                if (this.isLoading || !this.isDragging) return;
+                
+                const touchX = e.changedTouches[0].clientX;
+                const deltaX = touchX - this.touchStartX;
+                
+                if (Math.abs(deltaX) > this.dragThreshold) {
+                    if (deltaX > 0) {
                         this.prevContent();
                     } else {
                         this.nextContent();
                     }
-                });
+                }
                 
-                // Dot navigation
-                dotsContainer.addEventListener('click', (e) => {
-                    const dot = e.target.closest('.nav-dot');
-                    if (dot && dot.dataset.index) {
-                        this.goToContent(parseInt(dot.dataset.index));
-                    }
-                });
+                this.isDragging = false;
             }
             
-            updateCardPositionsDuringDrag(deltaX) {
-                const cardWidth = this.cards[0].offsetWidth;
-                const maxDrag = cardWidth * 0.5; // Limit drag distance
-                const normalizedDelta = Math.max(Math.min(deltaX, maxDrag), -maxDrag);
-                const dragPercent = normalizedDelta / cardWidth;
+            handleClick(e) {
+                if (this.isLoading || this.isDragging) return;
                 
-                // Calculate positions for each card based on drag
-                this.cards.forEach((card, index) => {
-                    let position;
-                    const relativeIndex = this.getRelativeIndex(index);
-                    
-                    switch(relativeIndex) {
-                        case -1: // prev card
-                            position = -70 + (dragPercent * 100);
-                            card.style.transform = `translateX(${position}%) scale(0.85)`;
-                            card.style.opacity = 0.7 + (dragPercent * 0.3);
-                            break;
-                        case 0: // current card
-                            position = dragPercent * 100;
-                            card.style.transform = `translateX(${position}%) scale(${1 - Math.abs(dragPercent) * 0.15})`;
-                            card.style.opacity = 1 - Math.abs(dragPercent) * 0.3;
-                            break;
-                        case 1: // next card
-                            position = 70 + (dragPercent * 100);
-                            card.style.transform = `translateX(${position}%) scale(0.85)`;
-                            card.style.opacity = 0.7 - (dragPercent * 0.3);
-                            break;
-                        default: // other cards
-                            card.style.opacity = '0';
-                            break;
-                    }
-                });
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const centerX = rect.width / 2;
+                
+                if (x < centerX - 50) {
+                    this.prevContent();
+                } else if (x > centerX + 50) {
+                    this.nextContent();
+                }
             }
             
-            getRelativeIndex(index) {
-                const diff = index - this.currentIndex;
-                const total = this.contentTypes.length;
-                
-                if (diff === 0) return 0;
-                if (diff === 1 || diff === 1 - total) return 1;
-                if (diff === -1 || diff === total - 1) return -1;
-                return diff;
+            handleDotClick(e) {
+                const dot = e.target.closest('.nav-dot');
+                if (dot && dot.dataset.index) {
+                    this.goToContent(parseInt(dot.dataset.index));
+                }
             }
             
             updateCardPositions() {
                 this.cards.forEach((card, index) => {
-                    // Remove all position classes
                     card.classList.remove('active', 'prev', 'next', 'inactive');
                     
-                    // Determine position based on index relative to current
                     const relativeIndex = this.getRelativeIndex(index);
                     
                     if (relativeIndex === 0) {
@@ -559,6 +611,16 @@
                         card.classList.add('inactive');
                     }
                 });
+            }
+            
+            getRelativeIndex(index) {
+                const diff = index - this.currentIndex;
+                const total = this.contentTypes.length;
+                
+                if (diff === 0) return 0;
+                if (diff === 1 || diff === 1 - total) return 1;
+                if (diff === -1 || diff === total - 1) return -1;
+                return diff;
             }
             
             nextContent() {
@@ -577,868 +639,218 @@
                 if (this.isLoading || index === this.currentIndex) return;
                 
                 this.currentIndex = index;
-                this.updateNavigation();
                 this.updateCardPositions();
-                this.updateCarousel();
+                this.updateNavigation();
+                
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(10);
+                }
             }
             
             updateNavigation() {
-                const navContainer = document.querySelector('.navigation');
-                navContainer.innerHTML = ''; 
+                const navigation = document.getElementById('navigation');
+                navigation.innerHTML = '';
+                
                 this.contentTypes.forEach((_, index) => {
                     const dot = document.createElement('div');
                     dot.classList.add('nav-dot');
+                    if (index === this.currentIndex) {
+                        dot.classList.add('active');
+                    }
                     dot.dataset.index = index;
-                    navContainer.appendChild(dot);
-                });
-                
-                const dots = document.querySelectorAll('.nav-dot');
-                dots.forEach((dot, index) => {
-                    dot.classList.toggle('active', index === this.currentIndex);
+                    navigation.appendChild(dot);
                 });
             }
             
             async loadAllContent() {
                 this.isLoading = true;
+                
                 try {
-                    await Promise.all([
-                        this.fetchWordOfTheDay(),
-                        this.fetchHistoricalFact(),
-                        this.fetchRandomFact(),
-                        this.fetchQuoteOfTheDay()
-                    ]);
+                    await Promise.all(this.contentTypes.map(async (contentType) => {
+                        await this.loadContentForType(contentType.type);
+                    }));
                 } catch (error) {
                     console.error('Error loading content:', error);
-                    this.showError('Failed to load content. Please try again later.');
                 } finally {
                     this.isLoading = false;
                 }
             }
             
-            async fetchWordOfTheDay() {
+            async loadContentForType(type) {
                 try {
-                    const dayIndex = new Date().getDay(); 
-                    const word = this.wordList[dayIndex % this.wordList.length]; 
+                    let content;
                     
-                    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-                    const data = await response.json();
-                    
-                    if (data && data[0]) {
-                        const entry = data[0];
-                        const meaning = entry.meanings[0];
-                        const definition = meaning.definitions[0];
-                        
-                        this.contentData.word = {
-                            word: word,
-                            definition: definition.definition,
-                            example: definition.example || `"${word}" is a beautiful word.`
-                        };
-                    } else {
-                        throw new Error("No definition found for word.");
-                    }
-                } catch (error) {
-                    console.error('Error fetching word:', error);
-                    this.contentData.word = {
-                        word: 'serendipity',
-                        definition: 'The occurrence and development of events by chance in a happy or beneficial way.',
-                        example: 'A fortunate stroke of serendipity brought them together.'
-                    };
-                }
-            }
-            
-            async fetchHistoricalFact() {
-                try {
-                    const now = new Date();
-                    const month = String(now.getMonth() + 1).padStart(2, '0');
-                    const day = String(now.getDate()).padStart(2, '0');
-                    
-                    const response = await fetch(`https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/${month}/${day}`);
-                    const data = await response.json();
-                    
-                    if (data && data.events && data.events.length > 0) {
-                        // Get a random event from the first 5 events for variety
-                        const eventIndex = Math.floor(Math.random() * Math.min(5, data.events.length));
-                        const event = data.events[eventIndex];
-                        
-                        // Format the full date for display
-                        const fullDateOptions = { month: 'long', day: 'numeric' };
-                        const monthDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
-
-                        // Get a more detailed description if available
-                        let detailedDescription = '';
-                        if (event.pages && event.pages.length > 0 && event.pages[0].extract) {
-                            // Check if the extract is actually about the historical event
-                            // and not about something tangentially related
-                            const extract = event.pages[0].extract;
-                            if (extract.includes(event.year) && extract.length < 500) {
-                                detailedDescription = extract;
-                            } else {
-                                // Create our own description if the extract doesn't seem relevant
-                                detailedDescription = `On ${monthDay} in the year ${event.year}: ${event.text} This event marks an important moment in history.`;
-                            }
-                        } else {
-                            // If no detailed description is available, create a more informative one
-                            detailedDescription = `On ${monthDay} in the year ${event.year}: ${event.text} This event marks an important moment in history.`;
-                        }
-
-                        this.contentData.history = {
-                            fullDate: monthDay,
-                            year: event.year,
-                            event: event.text,
-                            description: detailedDescription
-                        };
-                    } else {
-                         throw new Error("No historical events found for today.");
-                    }
-                } catch (error) {
-                    console.error('Error fetching historical fact:', error);
-                    const now = new Date(); 
-                    const fallbackFacts = [ // More detailed fallback facts
-                        { 
-                            year: '1099', 
-                            event: 'The Crusaders captured Jerusalem, ending the First Crusade.', 
-                            description: 'On this day in 1099, after a difficult siege that lasted over a month, Crusader forces captured Jerusalem. This marked the culmination of the First Crusade, which had been launched by Pope Urban II in 1095. The capture of Jerusalem resulted in a massacre of the city\'s Muslim and Jewish inhabitants and established the Kingdom of Jerusalem, which lasted for nearly two centuries until 1291. This event dramatically altered the political landscape of the Middle East and relations between the Islamic world and Western Christendom for centuries to come.'
-                        },
-                        { 
-                            year: '1799', 
-                            event: 'The Rosetta Stone was found by French soldiers in Rosetta (Rashid), Egypt.', 
-                            description: 'On this day in 1799, during Napoleon\'s Egyptian campaign, French Lieutenant Pierre-François Bouchard discovered the Rosetta Stone while supervising construction work at Fort Julien near the town of Rosetta. This granodiorite stele, inscribed with three versions of the same decree (hieroglyphic, demotic, and ancient Greek), became the key that finally allowed scholars to decipher ancient Egyptian hieroglyphs. This breakthrough, largely achieved by Jean-François Champollion in 1822, opened up the entire written record of ancient Egyptian civilization to modern understanding.'
-                        },
-                        { 
-                            year: '1965', 
-                            event: 'Mariner 4 transmits the first close-up pictures of Mars.', 
-                            description: 'On this day in 1965, NASA\'s Mariner 4 spacecraft completed the first successful flyby of Mars, transmitting 21 photographs of the Martian surface back to Earth. These historic images, showing a cratered, seemingly lifeless landscape, were the first close-up pictures of another planet ever returned from deep space. The mission revealed Mars to be more Moon-like than Earth-like, contradicting many previous assumptions. Mariner 4\'s discoveries fundamentally changed our understanding of Mars and paved the way for future Mars exploration missions that continue to this day.'
-                        }
-                    ];
-                    const factIndex = now.getDate() % fallbackFacts.length; 
-                    const fallbackData = fallbackFacts[factIndex];
-                    const fullDateOptions = { month: 'long', day: 'numeric' };
-                    const monthDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
-
-                    this.contentData.history = {
-                        fullDate: monthDay,
-                        year: fallbackData.year,
-                        event: fallbackData.event,
-                        description: fallbackData.description
-                    };
-                }
-            }
-            
-            async fetchRandomFact() {
-                try {
-                    const response = await fetch('https://uselessfacts.jsph.pl/random.json?language=en');
-                    const data = await response.json();
-                    
-                    if (data && data.text) {
-                        this.contentData.random = {
-                            fact: data.text,
-                            source: data.source_url || ''
-                        };
-                    } else {
-                        throw new Error("No random fact found.");
-                    }
-                } catch (error) {
-                    console.error('Error fetching random fact:', error);
-                    this.contentData.random = {
-                        fact: 'Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3000 years old and still perfectly edible.',
-                        source: ''
-                    };
-                }
-            }
-            
-            async fetchQuoteOfTheDay() {
-                try {
-                    const response = await fetch('https://zenquotes.io/api/today');
-                    const data = await response.json();
-                    
-                    if (data && data[0]) {
-                        this.contentData.quote = {
-                            text: data[0].q,
-                            author: data[0].a
-                        };
-                    } else {
-                        throw new Error("No quote found.");
-                    }
-                } catch (error) {
-                    console.error('Error fetching quote:', error);
-                    this.contentData.quote = {
-                        text: 'The only way to do great work is to love what you do.',
-                        author: 'Steve Jobs'
-                    };
-                }
-            }
-            
-            updateCarousel() {
-                // Update content for all cards
-                this.cards.forEach((card, index) => {
-                    const contentType = this.contentTypes[index];
-                    const data = this.contentData[contentType.type];
-                    
-                    if (!data) {
-                        this.showErrorOnCard(card, 'Content not available');
-                        return;
-                    }
-                    
-                    const typeEl = card.querySelector('.content-type');
-                    const titleEl = card.querySelector('.content-title');
-                    const bodyEl = card.querySelector('.content-body');
-                    const metaEl = card.querySelector('.content-meta');
-                    const scrollHintEl = card.querySelector('.scroll-hint');
-                    
-                    typeEl.textContent = contentType.title;
-                    
-                    switch (contentType.type) {
+                    switch (type) {
                         case 'word':
-                            titleEl.textContent = data.word.toUpperCase();
-                            bodyEl.textContent = data.definition;
-                            metaEl.textContent = data.example;
+                            content = await this.generateWordContent();
                             break;
-                            
                         case 'history':
-                            titleEl.textContent = `${data.fullDate}, ${data.year}`; /* Show full date with year in title */
-                            bodyEl.innerHTML = data.event; /* Removed redundant "Historical Event:" text */
-                            metaEl.textContent = data.description;
+                            content = await this.generateHistoryContent();
                             break;
-                            
                         case 'random':
-                            titleEl.textContent = 'Did You Know?';
-                            bodyEl.textContent = data.fact;
-                            metaEl.textContent = ''; 
+                            content = await this.generateRandomContent();
                             break;
-                            
                         case 'quote':
-                            titleEl.textContent = '"' + data.text + '"';
-                            bodyEl.textContent = ''; 
-                            metaEl.textContent = '— ' + data.author;
+                            content = await this.generateQuoteContent();
                             break;
+                        default:
+                            throw new Error(`Unknown content type: ${type}`);
                     }
                     
-                    // Check if content is scrollable and show hint if needed
-                    setTimeout(() => {
-                        if ((bodyEl.scrollHeight > bodyEl.clientHeight) || 
-                            (metaEl.scrollHeight > metaEl.clientHeight)) {
-                            scrollHintEl.style.display = 'block';
-                        } else {
-                            scrollHintEl.style.display = 'none';
-                        }
-                    }, 100); // Small delay to ensure content is rendered
-                });
+                    this.contentData[type] = content;
+                    this.updateCardContent(type, content);
+                    
+                } catch (error) {
+                    console.error(`Error loading ${type} content:`, error);
+                    this.contentData[type] = {
+                        title: 'Content Unavailable',
+                        body: 'Unable to load content at this time.',
+                        meta: 'Please try again later.'
+                    };
+                    this.updateCardContent(type, this.contentData[type]);
+                }
             }
             
-            showErrorOnCard(card, message) {
-                const typeEl = card.querySelector('.content-type');
+            async generateWordContent() {
+                const today = new Date();
+                const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+                const word = this.wordList[dayOfYear % this.wordList.length];
+                
+                const definitions = {
+                    'serendipity': 'The occurrence of events by chance in a happy way',
+                    'ephemeral': 'Lasting for a very short time; transitory',
+                    'petrichor': 'The pleasant smell of earth after rain',
+                    'luminous': 'Giving off light; bright or shining',
+                    'mellifluous': 'Sweet or musical; pleasant to hear',
+                    'ethereal': 'Extremely delicate and light; heavenly',
+                    'tranquil': 'Free from disturbance; calm and peaceful',
+                    'vivacious': 'Attractively lively and animated',
+                    'ubiquitous': 'Present, appearing, or found everywhere',
+                    'cacophony': 'A harsh, discordant mixture of sounds',
+                    'eloquent': 'Fluent and persuasive in speaking or writing',
+                    'pristine': 'In its original condition; unspoiled',
+                    'resilient': 'Able to withstand or recover quickly from difficulties',
+                    'magnificent': 'Extremely beautiful, elaborate, or impressive',
+                    'harmonious': 'Forming a pleasing or consistent whole'
+                };
+                
+                return {
+                    title: word.charAt(0).toUpperCase() + word.slice(1),
+                    body: definitions[word] || 'A beautiful word with deep meaning.',
+                    meta: `Try using "${word}" in a sentence today. Words have the power to shape our thoughts and express our deepest feelings. This word carries with it centuries of human expression and meaning.`
+                };
+            }
+            
+            async generateHistoryContent() {
+                const facts = [
+                    {
+                        title: 'The Library of Alexandria',
+                        body: 'Once the largest library in the ancient world, containing over 400,000 scrolls.',
+                        meta: 'Located in Alexandria, Egypt, it was a center of learning for over 600 years. Scholars from around the Mediterranean came to study mathematics, astronomy, medicine, and philosophy. Its decline marked the end of the Hellenistic period.'
+                    },
+                    {
+                        title: 'The Printing Press Revolution',
+                        body: 'Johannes Gutenberg\'s invention around 1440 revolutionized the spread of knowledge.',
+                        meta: 'Before the printing press, books were hand-copied by scribes, making them extremely expensive and rare. Gutenberg\'s innovation made books affordable and accessible, leading to increased literacy rates and the rapid spread of ideas during the Renaissance.'
+                    },
+                    {
+                        title: 'The Silk Road',
+                        body: 'An ancient network of trade routes connecting East and West for over 1,400 years.',
+                        meta: 'Stretching over 4,000 miles, the Silk Road facilitated not just trade in silk, spices, and precious metals, but also the exchange of ideas, technologies, and cultures. It played a crucial role in the development of civilizations across Asia, Europe, and Africa.'
+                    }
+                ];
+                
+                const today = new Date();
+                const factIndex = today.getDate() % facts.length;
+                return facts[factIndex];
+            }
+            
+            async generateRandomContent() {
+                const facts = [
+                    {
+                        title: 'Octopus Intelligence',
+                        body: 'Octopuses have three hearts and blue blood, and are considered among the most intelligent invertebrates.',
+                        meta: 'Two hearts pump blood to the gills, while the third pumps blood to the rest of the body. Their blue blood contains copper-based hemocyanin instead of iron-based hemoglobin. They can solve puzzles, use tools, and even show individual personalities.'
+                    },
+                    {
+                        title: 'Honey Never Spoils',
+                        body: 'Archaeologists have found edible honey in ancient Egyptian tombs over 3,000 years old.',
+                        meta: 'Honey\'s low moisture content and acidic pH create an environment where bacteria cannot survive. The bees also add an enzyme that breaks down into hydrogen peroxide, providing additional antimicrobial properties. This makes honey a natural preservative.'
+                    },
+                    {
+                        title: 'Trees Communicate',
+                        body: 'Trees can communicate with each other through underground fungal networks called mycorrhizae.',
+                        meta: 'These networks, sometimes called the "wood wide web," allow trees to share nutrients, water, and even warning signals about pests or diseases. Mother trees can recognize their offspring and send them more resources when needed.'
+                    }
+                ];
+                
+                const today = new Date();
+                const factIndex = (today.getDate() + today.getMonth()) % facts.length;
+                return facts[factIndex];
+            }
+            
+            async generateQuoteContent() {
+                const quotes = [
+                    {
+                        title: '"The only way to do great work is to love what you do."',
+                        body: '— Steve Jobs',
+                        meta: 'This quote reminds us that passion is the fuel for excellence. When we love what we do, work doesn\'t feel like work—it becomes a form of self-expression and personal growth. Find what ignites your curiosity and pursue it with dedication.'
+                    },
+                    {
+                        title: '"In the middle of difficulty lies opportunity."',
+                        body: '— Albert Einstein',
+                        meta: 'Einstein understood that challenges often contain the seeds of innovation and growth. Every obstacle we face is also a chance to develop new skills, discover hidden strengths, and create solutions that didn\'t exist before. Embrace difficulties as stepping stones to success.'
+                    },
+                    {
+                        title: '"The future belongs to those who believe in the beauty of their dreams."',
+                        body: '— Eleanor Roosevelt',
+                        meta: 'Dreams are not just wishful thinking—they are the blueprints for tomorrow. When we believe in our dreams with conviction and take action toward them, we shape our destiny. Your dreams are valid, and they have the power to transform not just your life, but the world around you.'
+                    }
+                ];
+                
+                const today = new Date();
+                const quoteIndex = (today.getDate() * 7) % quotes.length;
+                return quotes[quoteIndex];
+            }
+            
+            updateCardContent(type, content) {
+                const typeIndex = this.contentTypes.findIndex(t => t.type === type);
+                if (typeIndex === -1) return;
+                
+                const card = this.cards[typeIndex];
+                const contentTypeEl = card.querySelector('.content-type');
                 const titleEl = card.querySelector('.content-title');
                 const bodyEl = card.querySelector('.content-body');
                 const metaEl = card.querySelector('.content-meta');
                 
-                typeEl.textContent = 'Error';
-                titleEl.textContent = '';
-                bodyEl.innerHTML = `<span class="error">${message}</span>`;
-                metaEl.textContent = '';
+                const typeInfo = this.contentTypes[typeIndex];
+                contentTypeEl.textContent = `${typeInfo.icon} ${typeInfo.title}`;
+                titleEl.textContent = content.title;
+                bodyEl.innerHTML = content.body;
+                metaEl.textContent = content.meta;
             }
             
-            showError(message) {
-                // Show error on current card
-                this.showErrorOnCard(this.cards[this.currentIndex], message);
+            updateCarousel() {
+                this.contentTypes.forEach((contentType, index) => {
+                    if (this.contentData[contentType.type]) {
+                        this.updateCardContent(contentType.type, this.contentData[contentType.type]);
+                    }
+                });
             }
         }
         
+        // Initialize the app when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
-            new DailyContentApp();
+            new ModernDailyContentApp();
+        });
+        
+        // Handle orientation changes
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                window.scrollTo(0, 0);
+            }, 100);
         });
     </script>
-</body>
-</html>
-
-        this.currentIndex = 0;
-        this.contentTypes = [
-            { type: 'word', title: 'Word of the Day' },
-            { type: 'history', title: 'Historical Fact' },
-            { type: 'random', title: 'Random Fact' },
-            { type: 'quote', title: 'Quote of the Day' }
-        ];
-        this.contentData = {};
-        this.isLoading = false;
-        this.touchStartX = 0;
-        this.touchMoveX = 0;
-        this.touchEndX = 0;
-        this.isSwiping = false;
-        this.isDragging = false;
-        this.startTime = 0;
-        this.cards = [];
-        
-        // Hardcoded word list for daily rotation
-        this.wordList = [
-            'serendipity', 'ephemeral', 'petrichor', 'luminous', 'mellifluous',
-            'ethereal', 'tranquil', 'vivacious', 'ubiquitous', 'cacophony'
-        ];
-        
-        this.init();
-    }
-    
-    // Get today's date as a string for localStorage key
-    getTodayKey() {
-        const today = new Date();
-        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    }
-    
-    // Check if we have cached data for today
-    loadCachedData() {
-        const todayKey = this.getTodayKey();
-        const cachedData = localStorage.getItem(`dailyContent_${todayKey}`);
-        
-        if (cachedData) {
-            try {
-                this.contentData = JSON.parse(cachedData);
-                // Validate content types exist in cached data for current app version
-                for (const typeDef of this.contentTypes) {
-                    if (!this.contentData[typeDef.type]) {
-                        console.warn(`Cached data missing content for type: ${typeDef.type}. Refetching all.`);
-                        return false; 
-                    }
-                }
-                return true;
-            } catch (error) {
-                console.error('Error parsing cached data:', error);
-                localStorage.removeItem(`dailyContent_${todayKey}`); 
-            }
-        }
-        return false;
-    }
-    
-    // Save today's content to localStorage
-    saveCachedData() {
-        const todayKey = this.getTodayKey();
-        try {
-            localStorage.setItem(`dailyContent_${todayKey}`, JSON.stringify(this.contentData));
-            this.cleanupOldCache();
-        } catch (error) {
-            console.error('Error saving cached data:', error);
-        }
-    }
-    
-    // Remove cached data from previous days
-    cleanupOldCache() {
-        const todayKey = this.getTodayKey();
-        const keysToRemove = [];
-        
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('dailyContent_') && key !== `dailyContent_${todayKey}`) {
-                keysToRemove.push(key);
-            }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-    }
-    
-    init() {
-        this.updateDate();
-        this.createCards();
-        this.setupEventListeners();
-        this.updateNavigation(); 
-        
-        if (this.loadCachedData()) {
-            console.log('Loaded cached data for today');
-            this.updateCarousel(); // Display without animation on initial load
-        } else {
-            console.log('No cached data found, fetching fresh content');
-            this.loadAllContent().then(() => {
-                this.saveCachedData(); 
-                this.updateCarousel(); // Display without animation on initial load
-            });
-        }
-    }
-    
-    createCards() {
-        const carousel = document.getElementById('carousel');
-        carousel.innerHTML = '';
-        
-        // Create a card for each content type
-        this.contentTypes.forEach((_, index) => {
-            const card = document.createElement('div');
-            card.classList.add('content-card');
-            card.innerHTML = `
-                <div class="content-type">Loading...</div>
-                <div class="content-title"></div>
-                <div class="content-body">Getting your daily content...</div>
-                <div class="content-meta"></div>
-                <div class="scroll-hint" style="display: none;">Scroll for more</div>
-            `;
-            carousel.appendChild(card);
-            this.cards.push(card);
-        });
-        
-        // Set initial positions
-        this.updateCardPositions();
-    }
-    
-    updateDate() {
-        const now = new Date();
-        const options = { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        };
-        document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
-    }
-    
-    setupEventListeners() {
-        const carousel = document.getElementById('carousel');
-        const dotsContainer = document.querySelector('.navigation');
-        
-        // Tap navigation
-        carousel.addEventListener('click', (e) => {
-            if (this.isLoading || this.isDragging) {
-                this.isDragging = false;
-                return;
-            }
-            this.nextContent();
-        });
-        
-        // Dot navigation
-        dotsContainer.addEventListener('click', (e) => {
-            const dot = e.target.closest('.nav-dot');
-            if (dot && dot.dataset.index) {
-                this.goToContent(parseInt(dot.dataset.index));
-            }
-        });
-        
-        // Touch events for swipe and drag
-        carousel.addEventListener('touchstart', (e) => {
-            if (this.isLoading) return;
-            
-            this.touchStartX = e.touches[0].clientX;
-            this.isDragging = true;
-            this.startTime = Date.now();
-            
-            // Disable transitions during dragging for immediate response
-            this.cards.forEach(card => {
-                card.style.transition = 'none';
-            });
-            
-            e.preventDefault();
-        }, { passive: false });
-        
-        carousel.addEventListener('touchmove', (e) => {
-            if (!this.isDragging || this.isLoading) return;
-            
-            this.touchMoveX = e.touches[0].clientX;
-            const deltaX = this.touchMoveX - this.touchStartX;
-            
-            // Update card positions based on finger movement
-            this.updateCardPositionsDuringDrag(deltaX);
-            
-            e.preventDefault();
-        }, { passive: false });
-        
-        carousel.addEventListener('touchend', (e) => {
-            if (!this.isDragging || this.isLoading) return;
-            
-            // Re-enable smooth transitions
-            this.cards.forEach(card => {
-                card.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.4s ease';
-            });
-            
-            this.touchEndX = e.changedTouches[0].clientX;
-            const deltaX = this.touchEndX - this.touchStartX;
-            const timeDiff = Date.now() - this.startTime;
-            const velocity = Math.abs(deltaX) / timeDiff;
-            
-            // Improved swipe detection with velocity consideration
-            if (Math.abs(deltaX) > 40 || (Math.abs(deltaX) > 20 && velocity > 0.5)) {
-                if (deltaX < 0) {
-                    this.nextContent();
-                } else {
-                    this.prevContent();
-                }
-            } else {
-                // If not a significant swipe, reset to current position with animation
-                this.updateCardPositions();
-            }
-            
-            this.isDragging = false;
-        }, { passive: false });
-
-        // Add event listeners to check for scrollable content
-        this.cards.forEach(card => {
-            const bodyEl = card.querySelector('.content-body');
-            const metaEl = card.querySelector('.content-meta');
-            const scrollHintEl = card.querySelector('.scroll-hint');
-            
-            // Check if content is scrollable
-            const checkScrollable = () => {
-                if ((bodyEl.scrollHeight > bodyEl.clientHeight) || 
-                    (metaEl.scrollHeight > metaEl.clientHeight)) {
-                    scrollHintEl.style.display = 'block';
-                } else {
-                    scrollHintEl.style.display = 'none';
-                }
-            };
-            
-            // Check on content update
-            const observer = new MutationObserver(checkScrollable);
-            observer.observe(bodyEl, { childList: true, subtree: true, characterData: true });
-            observer.observe(metaEl, { childList: true, subtree: true, characterData: true });
-            
-            // Prevent card navigation when scrolling content
-            bodyEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
-            metaEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
-        });
-    }
-    
-    updateCardPositionsDuringDrag(deltaX) {
-        const cardWidth = this.cards[0].offsetWidth;
-        const maxDrag = cardWidth * 0.5; // Limit drag distance
-        const normalizedDelta = Math.max(Math.min(deltaX, maxDrag), -maxDrag);
-        const dragPercent = normalizedDelta / cardWidth;
-        
-        // Calculate positions for each card based on drag
-        this.cards.forEach((card, index) => {
-            let position;
-            const relativeIndex = this.getRelativeIndex(index);
-            
-            switch(relativeIndex) {
-                case -1: // prev card
-                    position = -70 + (dragPercent * 100);
-                    card.style.transform = `translateX(${position}%) scale(0.85)`;
-                    card.style.opacity = 0.7 + (dragPercent * 0.3);
-                    break;
-                case 0: // current card
-                    position = dragPercent * 100;
-                    card.style.transform = `translateX(${position}%) scale(${1 - Math.abs(dragPercent) * 0.15})`;
-                    card.style.opacity = 1 - Math.abs(dragPercent) * 0.3;
-                    break;
-                case 1: // next card
-                    position = 70 + (dragPercent * 100);
-                    card.style.transform = `translateX(${position}%) scale(0.85)`;
-                    card.style.opacity = 0.7 - (dragPercent * 0.3);
-                    break;
-                default: // other cards
-                    card.style.opacity = '0';
-                    break;
-            }
-        });
-    }
-    
-    getRelativeIndex(index) {
-        const diff = index - this.currentIndex;
-        const total = this.contentTypes.length;
-        
-        if (diff === 0) return 0;
-        if (diff === 1 || diff === 1 - total) return 1;
-        if (diff === -1 || diff === total - 1) return -1;
-        return diff;
-    }
-    
-    updateCardPositions() {
-        this.cards.forEach((card, index) => {
-            // Remove all position classes
-            card.classList.remove('active', 'prev', 'next', 'inactive');
-            
-            // Determine position based on index relative to current
-            const relativeIndex = this.getRelativeIndex(index);
-            
-            if (relativeIndex === 0) {
-                card.classList.add('active');
-            } else if (relativeIndex === -1) {
-                card.classList.add('prev');
-            } else if (relativeIndex === 1) {
-                card.classList.add('next');
-            } else {
-                card.classList.add('inactive');
-            }
-        });
-    }
-    
-    nextContent() {
-        if (this.isLoading) return;
-        const newIndex = (this.currentIndex + 1) % this.contentTypes.length;
-        this.goToContent(newIndex);
-    }
-    
-    prevContent() {
-        if (this.isLoading) return;
-        const newIndex = (this.currentIndex - 1 + this.contentTypes.length) % this.contentTypes.length;
-        this.goToContent(newIndex);
-    }
-    
-    goToContent(index) {
-        if (this.isLoading || index === this.currentIndex) return;
-        
-        this.currentIndex = index;
-        this.updateNavigation();
-        this.updateCardPositions();
-        this.updateCarousel();
-    }
-    
-    updateNavigation() {
-        const navContainer = document.querySelector('.navigation');
-        navContainer.innerHTML = ''; 
-        this.contentTypes.forEach((_, index) => {
-            const dot = document.createElement('div');
-            dot.classList.add('nav-dot');
-            dot.dataset.index = index;
-            navContainer.appendChild(dot);
-        });
-        
-        const dots = document.querySelectorAll('.nav-dot');
-        dots.forEach((dot, index) => {
-            dot.classList.toggle('active', index === this.currentIndex);
-        });
-    }
-    
-    async loadAllContent() {
-        this.isLoading = true;
-        try {
-            await Promise.all([
-                this.fetchWordOfTheDay(),
-                this.fetchHistoricalFact(),
-                this.fetchRandomFact(),
-                this.fetchQuoteOfTheDay()
-            ]);
-        } catch (error) {
-            console.error('Error loading content:', error);
-            this.showError('Failed to load content. Please try again later.');
-        } finally {
-            this.isLoading = false;
-        }
-    }
-    
-    async fetchWordOfTheDay() {
-        try {
-            const dayIndex = new Date().getDay(); 
-            const word = this.wordList[dayIndex % this.wordList.length]; 
-            
-            const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-            const data = await response.json();
-            
-            if (data && data[0]) {
-                const entry = data[0];
-                const meaning = entry.meanings[0];
-                const definition = meaning.definitions[0];
-                
-                this.contentData.word = {
-                    word: word,
-                    definition: definition.definition,
-                    example: definition.example || `"${word}" is a beautiful word.`
-                };
-            } else {
-                throw new Error("No definition found for word.");
-            }
-        } catch (error) {
-            console.error('Error fetching word:', error);
-            this.contentData.word = {
-                word: 'serendipity',
-                definition: 'The occurrence and development of events by chance in a happy or beneficial way.',
-                example: 'A fortunate stroke of serendipity brought them together.'
-            };
-        }
-    }
-    
-    async fetchHistoricalFact() {
-        try {
-            const now = new Date();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            
-            const response = await fetch(`https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/${month}/${day}`);
-            const data = await response.json();
-            
-            if (data && data.events && data.events.length > 0) {
-                // Get a random event from the first 5 events for variety
-                const eventIndex = Math.floor(Math.random() * Math.min(5, data.events.length));
-                const event = data.events[eventIndex];
-                
-                // Format the full date for display
-                const fullDateOptions = { month: 'long', day: 'numeric' };
-                const monthDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
-
-                // Get a more detailed description if available
-                let detailedDescription = '';
-                if (event.pages && event.pages.length > 0 && event.pages[0].extract) {
-                    // Check if the extract is actually about the historical event
-                    // and not about something tangentially related
-                    const extract = event.pages[0].extract;
-                    if (extract.includes(event.year) && extract.length < 500) {
-                        detailedDescription = extract;
-                    } else {
-                        // Create our own description if the extract doesn't seem relevant
-                        detailedDescription = `On ${monthDay} in the year ${event.year}: ${event.text} This event marks an important moment in history.`;
-                    }
-                } else {
-                    // If no detailed description is available, create a more informative one
-                    detailedDescription = `On ${monthDay} in the year ${event.year}: ${event.text} This event marks an important moment in history.`;
-                }
-
-                this.contentData.history = {
-                    fullDate: monthDay,
-                    year: event.year,
-                    event: event.text,
-                    description: detailedDescription
-                };
-            } else {
-                 throw new Error("No historical events found for today.");
-            }
-        } catch (error) {
-            console.error('Error fetching historical fact:', error);
-            const now = new Date(); 
-            const fallbackFacts = [ // More detailed fallback facts
-                { 
-                    year: '1099', 
-                    event: 'The Crusaders captured Jerusalem, ending the First Crusade.', 
-                    description: 'On this day in 1099, after a difficult siege that lasted over a month, Crusader forces captured Jerusalem. This marked the culmination of the First Crusade, which had been launched by Pope Urban II in 1095. The capture of Jerusalem resulted in a massacre of the city\'s Muslim and Jewish inhabitants and established the Kingdom of Jerusalem, which lasted for nearly two centuries until 1291. This event dramatically altered the political landscape of the Middle East and relations between the Islamic world and Western Christendom for centuries to come.'
-                },
-                { 
-                    year: '1799', 
-                    event: 'The Rosetta Stone was found by French soldiers in Rosetta (Rashid), Egypt.', 
-                    description: 'On this day in 1799, during Napoleon\'s Egyptian campaign, French Lieutenant Pierre-François Bouchard discovered the Rosetta Stone while supervising construction work at Fort Julien near the town of Rosetta. This granodiorite stele, inscribed with three versions of the same decree (hieroglyphic, demotic, and ancient Greek), became the key that finally allowed scholars to decipher ancient Egyptian hieroglyphs. This breakthrough, largely achieved by Jean-François Champollion in 1822, opened up the entire written record of ancient Egyptian civilization to modern understanding.'
-                },
-                { 
-                    year: '1965', 
-                    event: 'Mariner 4 transmits the first close-up pictures of Mars.', 
-                    description: 'On this day in 1965, NASA\'s Mariner 4 spacecraft completed the first successful flyby of Mars, transmitting 21 photographs of the Martian surface back to Earth. These historic images, showing a cratered, seemingly lifeless landscape, were the first close-up pictures of another planet ever returned from deep space. The mission revealed Mars to be more Moon-like than Earth-like, contradicting many previous assumptions. Mariner 4\'s discoveries fundamentally changed our understanding of Mars and paved the way for future Mars exploration missions that continue to this day.'
-                }
-            ];
-            const factIndex = now.getDate() % fallbackFacts.length; 
-            const fallbackData = fallbackFacts[factIndex];
-            const fullDateOptions = { month: 'long', day: 'numeric' };
-            const monthDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
-
-            this.contentData.history = {
-                fullDate: monthDay,
-                year: fallbackData.year,
-                event: fallbackData.event,
-                description: fallbackData.description
-            };
-        }
-    }
-    
-    async fetchRandomFact() {
-        try {
-            const response = await fetch('https://uselessfacts.jsph.pl/random.json?language=en');
-            const data = await response.json();
-            
-            if (data && data.text) {
-                this.contentData.random = {
-                    fact: data.text,
-                    source: data.source_url || ''
-                };
-            } else {
-                throw new Error("No random fact found.");
-            }
-        } catch (error) {
-            console.error('Error fetching random fact:', error);
-            this.contentData.random = {
-                fact: 'Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3000 years old and still perfectly edible.',
-                source: ''
-            };
-        }
-    }
-    
-    async fetchQuoteOfTheDay() {
-        try {
-            const response = await fetch('https://zenquotes.io/api/today');
-            const data = await response.json();
-            
-            if (data && data[0]) {
-                this.contentData.quote = {
-                    text: data[0].q,
-                    author: data[0].a
-                };
-            } else {
-                throw new Error("No quote found.");
-            }
-        } catch (error) {
-            console.error('Error fetching quote:', error);
-            this.contentData.quote = {
-                text: 'The only way to do great work is to love what you do.',
-                author: 'Steve Jobs'
-            };
-        }
-    }
-    
-    updateCarousel() {
-        // Update content for all cards
-        this.cards.forEach((card, index) => {
-            const contentType = this.contentTypes[index];
-            const data = this.contentData[contentType.type];
-            
-            if (!data) {
-                this.showErrorOnCard(card, 'Content not available');
-                return;
-            }
-            
-            const typeEl = card.querySelector('.content-type');
-            const titleEl = card.querySelector('.content-title');
-            const bodyEl = card.querySelector('.content-body');
-            const metaEl = card.querySelector('.content-meta');
-            const scrollHintEl = card.querySelector('.scroll-hint');
-            
-            typeEl.textContent = contentType.title;
-            
-            switch (contentType.type) {
-                case 'word':
-                    titleEl.textContent = data.word.toUpperCase();
-                    bodyEl.textContent = data.definition;
-                    metaEl.textContent = data.example;
-                    break;
-                    
-                case 'history':
-                    titleEl.textContent = `${data.fullDate}, ${data.year}`;
-                    bodyEl.innerHTML = data.event;
-                    // Add expand/collapse arrow
-                    metaEl.innerHTML = `${data.description} <span class="expand-arrow" style="cursor:pointer;float:right;">${this.expandedHistory ? '&#9650;' : '&#9660;'}</span>`;
-                    metaEl.style.maxHeight = this.expandedHistory ? '300px' : '80px';
-                    metaEl.style.overflowY = this.expandedHistory ? 'auto' : 'hidden';
-                    metaEl.style.cursor = 'pointer';
-                    break;
-                    
-                case 'random':
-                    titleEl.textContent = 'Did You Know?';
-                    bodyEl.textContent = data.fact;
-                    metaEl.textContent = ''; 
-                    break;
-                    
-                case 'quote':
-                    titleEl.textContent = '"' + data.text + '"';
-                    bodyEl.textContent = ''; 
-                    metaEl.textContent = '— ' + data.author;
-                    break;
-            }
-            
-            // Check if content is scrollable and show hint if needed
-            setTimeout(() => {
-                if ((bodyEl.scrollHeight > bodyEl.clientHeight) || 
-                    (metaEl.scrollHeight > metaEl.clientHeight)) {
-                    scrollHintEl.style.display = 'block';
-                } else {
-                    scrollHintEl.style.display = 'none';
-                }
-            }, 100); // Small delay to ensure content is rendered
-        });
-    }
-    
-    showErrorOnCard(card, message) {
-        const typeEl = card.querySelector('.content-type');
-        const titleEl = card.querySelector('.content-title');
-        const bodyEl = card.querySelector('.content-body');
-        const metaEl = card.querySelector('.content-meta');
-        
-        typeEl.textContent = 'Error';
-        titleEl.textContent = '';
-        bodyEl.innerHTML = `<span class="error">${message}</span>`;
-        metaEl.textContent = '';
-    }
-    
-    showError(message) {
-        // Show error on current card
-        this.showErrorOnCard(this.cards[this.currentIndex], message);
-    }
-}
-document.addEventListener('DOMContentLoaded', () => {
-    new DailyContentApp();
-});
-</script>
 </body>
 </html>
