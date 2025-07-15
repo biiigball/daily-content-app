@@ -17,13 +17,18 @@
             box-sizing: border-box;
         }
         
+        html, body {
+            height: 100%; /* Ensure html and body take full viewport height */
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background-color: #f8f9fa;
             color: #333;
             line-height: 1.6;
-            height: 100vh;
-            overflow: hidden;
+            overflow: hidden; /* Prevent scrolling if content overflows */
             /* iOS safe area support */
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
@@ -32,10 +37,10 @@
         .container {
             display: flex;
             flex-direction: column;
-            height: 100vh; /* Ensure container takes full height */
+            height: 100%; /* Take full height of body (minus safe areas) */
             max-width: 500px;
             margin: 0 auto;
-            padding: 20px; /* Default padding */
+            padding: 20px; /* Default padding for larger screens */
         }
         
         .header {
@@ -60,26 +65,26 @@
         .content-container {
             flex: 1; /* Allows it to take available vertical space */
             display: flex;
-            align-items: center;
-            justify-content: center;
+            align-items: center; /* Vertically center */
+            justify-content: center; /* Horizontally center */
             position: relative;
             overflow: hidden; /* For transition effects */
-            padding-bottom: 20px; /* Ensure space for hint/dots even if card is tall */
+            /* No padding-bottom here, let container manage its space */
         }
         
         .content-card {
             background: white;
             border-radius: 16px;
-            padding: 40px 30px;
+            padding: 40px 30px; /* Default padding */
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             width: 100%;
             max-width: 400px;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.2s ease, opacity 0.2s ease; /* Snappier animation */
+            transition: transform 0.15s ease, opacity 0.15s ease; /* Even snappier animation */
             user-select: none;
             position: relative;
-            min-height: 300px;
+            min-height: 300px; /* Default min-height */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -128,38 +133,38 @@
             font-style: italic;
         }
         
-        /* Adjusted positioning for swipe hint */
         .swipe-hint {
             text-align: center;
-            font-size: 0.75rem; /* Slightly smaller for less intrusiveness */
+            font-size: 0.75rem;
             color: #aaa;
             opacity: 0.7;
-            margin-top: 10px; /* Space above the hint */
-            margin-bottom: 10px; /* Space between hint and dots */
+            margin-top: 10px;
+            margin-bottom: 10px;
         }
 
         .navigation {
             display: flex;
             justify-content: center;
-            margin-top: 15px; /* Reduced margin, now flow is managed by swipe-hint's margin-bottom */
-            gap: 10px; /* Slightly more space between dots */
-            padding-bottom: env(safe-area-inset-bottom); /* Ensure dots are above safe area */
+            margin-top: 15px; /* Space above dots */
+            gap: 10px;
+            z-index: 10; /* Ensure dots are on top */
+            position: relative; /* Needed for z-index to work against normal flow */
         }
         
         .nav-dot {
-            width: 12px; /* Increased size for visibility */
-            height: 12px; /* Increased size for visibility */
+            width: 16px; /* Larger dots for better visibility */
+            height: 16px; /* Larger dots */
             border-radius: 50%;
-            background-color: #bbb; /* Better visibility when inactive */
-            border: 1px solid #ccc; /* Subtle border */
+            background-color: #bbb;
+            border: 2px solid #ccc; /* Thicker border for definition */
             cursor: pointer;
             transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease;
         }
         
         .nav-dot.active {
-            background-color: #007AFF; /* iOS blue */
-            border-color: #007AFF; /* Border matches active color */
-            transform: scale(1.2); /* Active dot is more prominent */
+            background-color: #007AFF;
+            border-color: #007AFF;
+            transform: scale(1.15);
         }
         
         .nav-dot:hover:not(.active) {
@@ -177,36 +182,55 @@
             font-size: 0.9rem;
         }
         
-        @media (max-width: 480px) {
+        @media (max-width: 480px) { /* Styles specifically for iPhone screens */
             .container {
-                padding: 10px; /* Reduced padding for smaller screens to maximize content area */
+                padding: 10px; /* Minimal padding to ensure full screen usage */
             }
             
             .content-card {
-                padding: 25px 15px; /* Reduced padding on card for smaller screens */
-                min-height: 220px; /* Slightly smaller min-height */
+                max-width: 300px; /* Make the card significantly smaller */
+                padding: 20px 15px; /* Adjust padding for smaller card */
+                min-height: 180px; /* Smaller min-height */
+                margin-top: -30px; /* Move card up from center */
             }
             
             .header h1 {
-                font-size: 1.4rem;
+                font-size: 1.3rem;
+                margin-bottom: 5px;
+            }
+            
+            .date {
+                font-size: 0.8rem;
+            }
+            
+            .content-type {
+                font-size: 0.75rem;
+                margin-bottom: 15px;
             }
             
             .content-title {
-                font-size: 1.1rem;
+                font-size: 1.0rem; /* Slightly smaller */
+                margin-bottom: 15px;
             }
             
             .content-body {
-                font-size: 0.9rem;
+                font-size: 0.85rem; /* Smaller body text */
+                line-height: 1.5;
+                margin-bottom: 15px;
+            }
+            
+            .content-meta {
+                font-size: 0.8rem;
             }
 
             .swipe-hint {
-                font-size: 0.7rem; /* Even smaller on tiny screens */
-                margin-top: 5px; /* Less space needed */
+                font-size: 0.65rem; /* Smallest on tiny screens */
+                margin-top: auto; /* Push it to bottom if space allows */
                 margin-bottom: 5px;
             }
 
             .navigation {
-                margin-top: 10px; /* Less space */
+                margin-top: 5px; /* Minimal space above dots on small screens */
             }
         }
     </style>
@@ -230,10 +254,6 @@
         <div class="swipe-hint">Tap or swipe to navigate</div>
 
         <div class="navigation">
-            <div class="nav-dot active" data-index="0"></div>
-            <div class="nav-dot" data-index="1"></div>
-            <div class="nav-dot" data-index="2"></div>
-            <div class="nav-dot" data-index="3"></div>
             </div>
         
     </div>
@@ -247,12 +267,12 @@
                     { type: 'history', title: 'Historical Fact' },
                     { type: 'random', title: 'Random Fact' },
                     { type: 'quote', title: 'Quote of the Day' }
-                    // Removed Bible Quote content type
                 ];
                 this.contentData = {};
                 this.isLoading = false;
                 this.touchStartX = 0;
                 this.touchEndX = 0;
+                this.isSwiping = false; // Flag to prevent click from firing after swipe
                 
                 // Hardcoded word list for daily rotation
                 this.wordList = [
@@ -288,7 +308,7 @@
                         return true;
                     } catch (error) {
                         console.error('Error parsing cached data:', error);
-                        localStorage.removeItem(`dailyContent_${todayKey}`);
+                        localStorage.removeItem(`dailyContent_${todayKey}`); // Clear bad cache
                     }
                 }
                 return false;
@@ -354,41 +374,64 @@
             
             setupEventListeners() {
                 const card = document.getElementById('content-card');
-                const dots = document.querySelectorAll('.nav-dot');
+                const dotsContainer = document.querySelector('.navigation'); // Target the container for dots
                 
-                // Click navigation (anywhere on card)
-                card.addEventListener('click', () => this.nextContent());
+                // CLICK ANYWHERE on the body to go to next content, but exclude dot clicks
+                document.body.addEventListener('click', (e) => {
+                    if (this.isLoading || this.isSwiping) {
+                        this.isSwiping = false; // Reset swipe flag
+                        return;
+                    }
+                    // Check if the click target or any of its parents is a nav-dot
+                    if (e.target.closest('.nav-dot')) {
+                        // This click is on a dot, so let the dot's own handler take over
+                        return;
+                    }
+                    // Otherwise, it's a general click, advance content
+                    this.nextContent();
+                });
                 
-                // Dot navigation
-                dots.forEach((dot, index) => {
-                    dot.addEventListener('click', (e) => {
-                        e.stopPropagation(); // Prevent card click from firing
-                        this.goToContent(index);
-                    });
+                // Dot navigation listener (delegated to container for efficiency)
+                dotsContainer.addEventListener('click', (e) => {
+                    const dot = e.target.closest('.nav-dot');
+                    if (dot && dot.dataset.index) {
+                        this.goToContent(parseInt(dot.dataset.index));
+                    }
                 });
                 
                 // Touch navigation
                 card.addEventListener('touchstart', (e) => {
                     this.touchStartX = e.changedTouches[0].screenX;
+                    this.isSwiping = false; // Reset
                 }, { passive: true });
                 
+                card.addEventListener('touchmove', (e) => {
+                    // This can be used to detect if a significant swipe has occurred
+                    // before touchend, setting isSwiping to true if so.
+                    // For simplicity, we'll set isSwiping in touchend if swipe threshold is met.
+                }, { passive: true });
+
                 card.addEventListener('touchend', (e) => {
                     this.touchEndX = e.changedTouches[0].screenX;
-                    this.handleSwipe();
+                    if (this.handleSwipe()) { // handleSwipe now returns true if a swipe occurred
+                        this.isSwiping = true; // Mark as swiping to prevent click event
+                    }
                 }, { passive: true });
             }
             
             handleSwipe() {
-                const swipeThreshold = 50;
+                const swipeThreshold = 50; // Pixels
                 const diff = this.touchStartX - this.touchEndX;
                 
                 if (Math.abs(diff) > swipeThreshold) {
-                    if (diff > 0) {
+                    if (diff > 0) { // Swiped left (show next)
                         this.nextContent();
-                    } else {
+                    } else { // Swiped right (show previous)
                         this.prevContent();
                     }
+                    return true; // Indicate a swipe occurred
                 }
+                return false; // No significant swipe
             }
             
             nextContent() {
@@ -410,7 +453,6 @@
             }
             
             updateNavigation() {
-                // Adjust for fewer dots if contentTypes change
                 const navContainer = document.querySelector('.navigation');
                 navContainer.innerHTML = ''; // Clear existing dots
                 this.contentTypes.forEach((_, index) => {
@@ -436,11 +478,7 @@
                         this.fetchHistoricalFact(),
                         this.fetchRandomFact(),
                         this.fetchQuoteOfTheDay()
-                        // Removed fetchBibleVerseOfTheDay()
                     ]);
-                    
-                    // Once all fetches are done and contentData is populated,
-                    // the init() method will call saveCachedData() and then displayContent()
                     
                 } catch (error) {
                     console.error('Error loading content:', error);
@@ -469,7 +507,6 @@
                             example: definition.example || `"${word}" is a beautiful word.`
                         };
                     } else {
-                        // Fallback if API returns no data for the word
                         throw new Error("No definition found for word.");
                     }
                 } catch (error) {
@@ -492,7 +529,7 @@
                     const data = await response.json();
                     
                     if (data && data.events && data.events.length > 0) {
-                        const event = data.events[0]; // Take the first event for simplicity
+                        const event = data.events[0];
                         this.contentData.history = {
                             year: event.year,
                             event: event.text,
@@ -503,13 +540,12 @@
                     }
                 } catch (error) {
                     console.error('Error fetching historical fact:', error);
-                    // Fallback to a static historical fact
+                    const now = new Date(); // Re-declare for scope inside catch
                     const july15thFacts = [
                         { year: '1099', event: 'The Crusaders captured Jerusalem, ending the First Crusade.', description: 'A pivotal moment in medieval history.' },
                         { year: '1799', event: 'The Rosetta Stone was found by French soldiers in Rosetta (Rashid), Egypt.', description: 'Key to deciphering Egyptian hieroglyphs.' },
                         { year: '1965', event: 'Mariner 4 transmits the first close-up pictures of Mars.', description: 'The first successful flyby of Mars by a spacecraft.' }
                     ];
-                    // Use a simple hash based on date to pick one consistently for the day
                     const factIndex = now.getDate() % july15thFacts.length; 
                     this.contentData.history = july15thFacts[factIndex];
                 }
@@ -559,8 +595,6 @@
                 }
             }
             
-            // Removed fetchBibleVerseOfTheDay() method
-            
             displayContent() {
                 const contentType = this.contentTypes[this.currentIndex];
                 const data = this.contentData[contentType.type];
@@ -592,21 +626,14 @@
                         case 'random':
                             document.getElementById('content-title').textContent = 'Did You Know?';
                             document.getElementById('content-body').textContent = data.fact;
-                            document.getElementById('content-meta').textContent = ''; // Random fact doesn't have a specific meta line
+                            document.getElementById('content-meta').textContent = '';
                             break;
                             
                         case 'quote':
                             document.getElementById('content-title').textContent = '"' + data.text + '"';
-                            document.getElementById('content-body').textContent = ''; // Quote body is empty
+                            document.getElementById('content-body').textContent = '';
                             document.getElementById('content-meta').textContent = '— ' + data.author;
                             break;
-                        /* Removed Bible case
-                        case 'bible': 
-                            document.getElementById('content-title').textContent = data.reference;
-                            document.getElementById('content-body').textContent = '"' + data.text + '"';
-                            document.getElementById('content-meta').textContent = '';
-                            break;
-                        */
                     }
                     
                     card.classList.remove('sliding-out');
@@ -614,8 +641,8 @@
                     
                     setTimeout(() => {
                         card.classList.remove('sliding-in');
-                    }, 100); /* Snappier animation */
-                }, 100); /* Snappier animation */
+                    }, 80); /* Very snappier animation */
+                }, 80); /* Very snappier animation */
             }
             
             showError(message) {
