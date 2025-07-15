@@ -105,7 +105,7 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-start; /* Align content to top instead of center */
-            transition: transform 0.3s ease, opacity 0.3s ease; /* Simpler transition */
+            transition: transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.4s ease; /* Smoother transition */
             will-change: transform, opacity; /* Optimize for animations */
             backface-visibility: hidden; /* Prevent flickering during animations */
             overflow-y: auto; /* Allow scrolling if content is too long */
@@ -163,12 +163,17 @@
             overflow-y: auto; /* Add scrolling if needed */
             text-align: left; /* Left-align text for better readability */
             padding: 0 5px; /* Add a bit of padding */
+            max-height: 150px; /* Set a max height to ensure scrollability */
         }
         
         .content-meta {
             font-size: 0.9rem;
             color: #888;
             font-style: italic;
+            overflow-y: auto; /* Allow meta to scroll if needed */
+            max-height: 80px; /* Limit height to ensure it doesn't push other content */
+            text-align: left; /* Left-align text */
+            padding: 0 5px; /* Add padding */
         }
         
         .swipe-hint {
@@ -178,6 +183,22 @@
             opacity: 0.7;
             margin-top: 10px; 
             margin-bottom: 10px; 
+        }
+
+        .scroll-hint {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #aaa;
+            margin-top: 5px;
+            padding: 3px 0;
+            border-top: 1px dotted #eee;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
         }
 
         .navigation {
@@ -265,10 +286,12 @@
                 font-size: 0.85rem; 
                 line-height: 1.5;
                 margin-bottom: 15px;
+                max-height: 100px; /* Smaller max height for mobile */
             }
             
             .content-meta {
                 font-size: 0.8rem;
+                max-height: 60px; /* Smaller max height for mobile */
             }
 
             .swipe-hint {
@@ -279,6 +302,10 @@
 
             .navigation {
                 margin-top: 5px; 
+            }
+
+            .scroll-hint {
+                font-size: 0.65rem;
             }
         }
     </style>
@@ -418,7 +445,7 @@
                         <div class="content-title"></div>
                         <div class="content-body">Getting your daily content...</div>
                         <div class="content-meta"></div>
-                        <div class="scroll-hint" style="font-size: 0.7rem; color: #aaa; margin-top: 5px; display: none;">Scroll for more</div>
+                        <div class="scroll-hint" style="display: none;">Scroll for more</div>
                     `;
                     carousel.appendChild(card);
                     this.cards.push(card);
@@ -491,28 +518,56 @@
                 carousel.addEventListener('touchend', (e) => {
                     if (!this.isDragging || this.isLoading) return;
                     
-                    // Re-enable simple transitions
+                    // Re-enable smooth transitions
                     this.cards.forEach(card => {
-                        card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+                        card.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.4s ease';
                     });
                     
                     this.touchEndX = e.changedTouches[0].clientX;
                     const deltaX = this.touchEndX - this.touchStartX;
+                    const timeDiff = Date.now() - this.startTime;
+                    const velocity = Math.abs(deltaX) / timeDiff;
                     
-                    // Simple swipe detection - no fancy physics
-                    if (Math.abs(deltaX) > 50) { // Increased threshold for more deliberate swipes
+                    // Improved swipe detection with velocity consideration
+                    if (Math.abs(deltaX) > 40 || (Math.abs(deltaX) > 20 && velocity > 0.5)) {
                         if (deltaX < 0) {
                             this.nextContent();
                         } else {
                             this.prevContent();
                         }
                     } else {
-                        // If not a significant swipe, reset to current position
+                        // If not a significant swipe, reset to current position with animation
                         this.updateCardPositions();
                     }
                     
                     this.isDragging = false;
                 }, { passive: false });
+
+                // Add event listeners to check for scrollable content
+                this.cards.forEach(card => {
+                    const bodyEl = card.querySelector('.content-body');
+                    const metaEl = card.querySelector('.content-meta');
+                    const scrollHintEl = card.querySelector('.scroll-hint');
+                    
+                    // Check if content is scrollable
+                    const checkScrollable = () => {
+                        if ((bodyEl.scrollHeight > bodyEl.clientHeight) || 
+                            (metaEl.scrollHeight > metaEl.clientHeight)) {
+                            scrollHintEl.style.display = 'block';
+                        } else {
+                            scrollHintEl.style.display = 'none';
+                        }
+                    };
+                    
+                    // Check on content update
+                    const observer = new MutationObserver(checkScrollable);
+                    observer.observe(bodyEl, { childList: true, subtree: true, characterData: true });
+                    observer.observe(metaEl, { childList: true, subtree: true, characterData: true });
+                    
+                    // Prevent card navigation when scrolling content
+                    bodyEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+                    metaEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+                });
             }
             
             updateCardPositionsDuringDrag(deltaX) {
@@ -814,7 +869,7 @@
                             
                         case 'history':
                             titleEl.textContent = `${data.fullDate}, ${data.year}`; /* Show full date with year in title */
-                            bodyEl.innerHTML = `<strong>Historical Event:</strong><br>${data.event}`;
+                            bodyEl.innerHTML = data.event; /* Removed redundant "Historical Event:" text */
                             metaEl.textContent = data.description;
                             break;
                             
@@ -830,17 +885,18 @@
                             metaEl.textContent = '— ' + data.author;
                             break;
                     }
+                    
+                    // Check if content is scrollable and show hint if needed
+                    setTimeout(() => {
+                        if ((bodyEl.scrollHeight > bodyEl.clientHeight) || 
+                            (metaEl.scrollHeight > metaEl.clientHeight)) {
+                            scrollHintEl.style.display = 'block';
+                        } else {
+                            scrollHintEl.style.display = 'none';
+                        }
+                    }, 100); // Small delay to ensure content is rendered
                 });
-                
-                // Check if content is scrollable and show hint if needed
-                setTimeout(() => {
-                    if (bodyEl.scrollHeight > bodyEl.clientHeight) {
-                        scrollHintEl.style.display = 'block';
-                    } else {
-                        scrollHintEl.style.display = 'none';
-                    }
-                }, 100); // Small delay to ensure content is rendered
-            };
+            }
             
             showErrorOnCard(card, message) {
                 const typeEl = card.querySelector('.content-type');
