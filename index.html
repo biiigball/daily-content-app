@@ -76,7 +76,18 @@
             align-items: center; /* Vertically center */
             justify-content: center; /* Horizontally center */
             position: relative;
-            overflow: hidden; /* For transition effects */
+            overflow: visible; /* Changed to visible to show adjacent cards */
+            perspective: 1000px; /* Add perspective for 3D effect */
+            width: 100%;
+        }
+        
+        .carousel {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .content-card {
@@ -88,56 +99,51 @@
             max-width: 400px;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.25s ease-out, opacity 0.25s ease-out; /* Snappier animation */
             user-select: none;
-            position: relative;
-            min-height: 300px; /* Default min-height */
+            position: absolute;
+            height: 350px; /* Standardized fixed height for all cards */
             display: flex;
             flex-direction: column;
             justify-content: center;
-            /* Default state */
-            transform: translateX(0);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            will-change: transform, opacity; /* Optimize for animations */
+            backface-visibility: hidden; /* Prevent flickering during animations */
+            overflow-y: auto; /* Allow scrolling if content is too long */
+        }
+        
+        .content-card.active {
+            z-index: 3;
+            transform: translateX(0) scale(1);
             opacity: 1;
         }
         
-        .content-card:hover {
-            transform: translateY(-2px);
+        .content-card.prev {
+            z-index: 2;
+            transform: translateX(-70%) scale(0.85);
+            opacity: 0.3; /* Reduced visibility */
         }
         
-        /* Animation classes for directional sliding */
-        .content-card.slide-out-left {
-            transform: translateX(-100%);
+        .content-card.next {
+            z-index: 2;
+            transform: translateX(70%) scale(0.85);
+            opacity: 0.3; /* Reduced visibility */
+        }
+        
+        .content-card.inactive {
+            z-index: 1;
             opacity: 0;
+            pointer-events: none;
         }
         
-        .content-card.slide-out-right {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        
-        .content-card.slide-in-left {
-            transform: translateX(-100%); /* Start off-screen left */
-            opacity: 0;
-        }
-        
-        .content-card.slide-in-right {
-            transform: translateX(100%); /* Start off-screen right */
-            opacity: 0;
-        }
-        
-        /* This class is applied after content update and then removed to trigger entry animation */
-        .content-card.active-transition { 
-             transform: translateX(0); /* Target state for new card */
-             opacity: 1;
-        }
-
         .content-type {
             font-size: 0.8rem;
             color: #666;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             font-weight: 500;
+            white-space: nowrap; /* Prevent wrapping */
+            overflow: visible; /* Ensure text is fully visible */
         }
         
         .content-title {
@@ -152,6 +158,8 @@
             color: #555;
             line-height: 1.7;
             margin-bottom: 20px;
+            flex-grow: 1; /* Allow body to grow and fill space */
+            overflow-y: auto; /* Add scrolling if needed */
         }
         
         .content-meta {
@@ -217,8 +225,18 @@
             .content-card {
                 max-width: 300px; 
                 padding: 20px 15px; 
-                min-height: 180px; 
+                height: 250px; /* Standardized height for mobile */
                 margin-top: -30px; /* Move card up from center */
+            }
+            
+            .content-card.prev {
+                transform: translateX(-60%) scale(0.85);
+                opacity: 0.2; /* Even less visible on mobile */
+            }
+            
+            .content-card.next {
+                transform: translateX(60%) scale(0.85);
+                opacity: 0.2; /* Even less visible on mobile */
             }
             
             .header h1 {
@@ -270,11 +288,8 @@
         </div>
         
         <div class="content-container">
-            <div class="content-card" id="content-card">
-                <div class="content-type" id="content-type">Loading...</div>
-                <div class="content-title" id="content-title"></div>
-                <div class="content-body" id="content-body">Getting your daily content...</div>
-                <div class="content-meta" id="content-meta"></div>
+            <div class="carousel" id="carousel">
+                <!-- Cards will be dynamically created here -->
             </div>
         </div>
         
@@ -298,8 +313,12 @@
                 this.contentData = {};
                 this.isLoading = false;
                 this.touchStartX = 0;
+                this.touchMoveX = 0;
                 this.touchEndX = 0;
-                this.isSwiping = false; 
+                this.isSwiping = false;
+                this.isDragging = false;
+                this.startTime = 0;
+                this.cards = [];
                 
                 // Hardcoded word list for daily rotation
                 this.wordList = [
@@ -367,19 +386,42 @@
             
             init() {
                 this.updateDate();
+                this.createCards();
                 this.setupEventListeners();
                 this.updateNavigation(); 
                 
                 if (this.loadCachedData()) {
                     console.log('Loaded cached data for today');
-                    this.displayContent('initial'); // Display without animation on initial load
+                    this.updateCarousel(); // Display without animation on initial load
                 } else {
                     console.log('No cached data found, fetching fresh content');
                     this.loadAllContent().then(() => {
                         this.saveCachedData(); 
-                        this.displayContent('initial'); // Display without animation on initial load
+                        this.updateCarousel(); // Display without animation on initial load
                     });
                 }
+            }
+            
+            createCards() {
+                const carousel = document.getElementById('carousel');
+                carousel.innerHTML = '';
+                
+                // Create a card for each content type
+                this.contentTypes.forEach((_, index) => {
+                    const card = document.createElement('div');
+                    card.classList.add('content-card');
+                    card.innerHTML = `
+                        <div class="content-type">Loading...</div>
+                        <div class="content-title"></div>
+                        <div class="content-body">Getting your daily content...</div>
+                        <div class="content-meta"></div>
+                    `;
+                    carousel.appendChild(card);
+                    this.cards.push(card);
+                });
+                
+                // Set initial positions
+                this.updateCardPositions();
             }
             
             updateDate() {
@@ -394,20 +436,19 @@
             }
             
             setupEventListeners() {
-                const card = document.getElementById('content-card');
-                const dotsContainer = document.querySelector('.navigation'); 
+                const carousel = document.getElementById('carousel');
+                const dotsContainer = document.querySelector('.navigation');
                 
-                document.body.addEventListener('click', (e) => {
-                    if (this.isLoading || this.isSwiping) {
-                        this.isSwiping = false; 
-                        return;
-                    }
-                    if (e.target.closest('.nav-dot')) {
+                // Tap navigation
+                carousel.addEventListener('click', (e) => {
+                    if (this.isLoading || this.isDragging) {
+                        this.isDragging = false;
                         return;
                     }
                     this.nextContent();
                 });
                 
+                // Dot navigation
                 dotsContainer.addEventListener('click', (e) => {
                     const dot = e.target.closest('.nav-dot');
                     if (dot && dot.dataset.index) {
@@ -415,65 +456,149 @@
                     }
                 });
                 
-                card.addEventListener('touchstart', (e) => {
-                    this.touchStartX = e.changedTouches[0].screenX;
-                    this.isSwiping = false; 
-                }, { passive: true });
+                // Touch events for swipe and drag
+                carousel.addEventListener('touchstart', (e) => {
+                    if (this.isLoading) return;
+                    
+                    this.touchStartX = e.touches[0].clientX;
+                    this.isDragging = true;
+                    this.startTime = Date.now();
+                    
+                    // Disable transitions during dragging for immediate response
+                    this.cards.forEach(card => {
+                        card.style.transition = 'none';
+                    });
+                    
+                    e.preventDefault();
+                }, { passive: false });
                 
-                card.addEventListener('touchend', (e) => {
-                    this.touchEndX = e.changedTouches[0].screenX;
-                    if (this.handleSwipe()) { 
-                        this.isSwiping = true; 
+                carousel.addEventListener('touchmove', (e) => {
+                    if (!this.isDragging || this.isLoading) return;
+                    
+                    this.touchMoveX = e.touches[0].clientX;
+                    const deltaX = this.touchMoveX - this.touchStartX;
+                    
+                    // Update card positions based on finger movement
+                    this.updateCardPositionsDuringDrag(deltaX);
+                    
+                    e.preventDefault();
+                }, { passive: false });
+                
+                carousel.addEventListener('touchend', (e) => {
+                    if (!this.isDragging || this.isLoading) return;
+                    
+                    // Re-enable transitions
+                    this.cards.forEach(card => {
+                        card.style.transition = '';
+                    });
+                    
+                    this.touchEndX = e.changedTouches[0].clientX;
+                    const deltaX = this.touchEndX - this.touchStartX;
+                    const duration = Date.now() - this.startTime;
+                    
+                    // Calculate velocity for swipe detection
+                    const velocity = Math.abs(deltaX) / duration;
+                    
+                    // Determine if swipe should trigger navigation
+                    if (Math.abs(deltaX) > 50 || (Math.abs(deltaX) > 20 && velocity > 0.5)) {
+                        if (deltaX < 0) {
+                            this.nextContent();
+                        } else {
+                            this.prevContent();
+                        }
+                    } else {
+                        // If not a significant swipe, reset to current position
+                        this.updateCardPositions();
                     }
-                }, { passive: true });
+                    
+                    this.isDragging = false;
+                    e.preventDefault();
+                }, { passive: false });
             }
             
-            handleSwipe() {
-                const swipeThreshold = 50; 
-                const diff = this.touchStartX - this.touchEndX;
+            updateCardPositionsDuringDrag(deltaX) {
+                const cardWidth = this.cards[0].offsetWidth;
+                const maxDrag = cardWidth * 0.5; // Limit drag distance
+                const normalizedDelta = Math.max(Math.min(deltaX, maxDrag), -maxDrag);
+                const dragPercent = normalizedDelta / cardWidth;
                 
-                if (Math.abs(diff) > swipeThreshold) {
-                    if (diff > 0) { // Swiped left (show next)
-                        this.nextContent();
-                    } else { // Swiped right (show previous)
-                        this.prevContent();
+                // Calculate positions for each card based on drag
+                this.cards.forEach((card, index) => {
+                    let position;
+                    const relativeIndex = this.getRelativeIndex(index);
+                    
+                    switch(relativeIndex) {
+                        case -1: // prev card
+                            position = -70 + (dragPercent * 100);
+                            card.style.transform = `translateX(${position}%) scale(0.85)`;
+                            card.style.opacity = 0.7 + (dragPercent * 0.3);
+                            break;
+                        case 0: // current card
+                            position = dragPercent * 100;
+                            card.style.transform = `translateX(${position}%) scale(${1 - Math.abs(dragPercent) * 0.15})`;
+                            card.style.opacity = 1 - Math.abs(dragPercent) * 0.3;
+                            break;
+                        case 1: // next card
+                            position = 70 + (dragPercent * 100);
+                            card.style.transform = `translateX(${position}%) scale(0.85)`;
+                            card.style.opacity = 0.7 - (dragPercent * 0.3);
+                            break;
+                        default: // other cards
+                            card.style.opacity = '0';
+                            break;
                     }
-                    return true; 
-                }
-                return false; 
+                });
+            }
+            
+            getRelativeIndex(index) {
+                const diff = index - this.currentIndex;
+                const total = this.contentTypes.length;
+                
+                if (diff === 0) return 0;
+                if (diff === 1 || diff === 1 - total) return 1;
+                if (diff === -1 || diff === total - 1) return -1;
+                return diff;
+            }
+            
+            updateCardPositions() {
+                this.cards.forEach((card, index) => {
+                    // Remove all position classes
+                    card.classList.remove('active', 'prev', 'next', 'inactive');
+                    
+                    // Determine position based on index relative to current
+                    const relativeIndex = this.getRelativeIndex(index);
+                    
+                    if (relativeIndex === 0) {
+                        card.classList.add('active');
+                    } else if (relativeIndex === -1) {
+                        card.classList.add('prev');
+                    } else if (relativeIndex === 1) {
+                        card.classList.add('next');
+                    } else {
+                        card.classList.add('inactive');
+                    }
+                });
             }
             
             nextContent() {
                 if (this.isLoading) return;
                 const newIndex = (this.currentIndex + 1) % this.contentTypes.length;
-                this.goToContent(newIndex, 'forward');
+                this.goToContent(newIndex);
             }
             
             prevContent() {
                 if (this.isLoading) return;
                 const newIndex = (this.currentIndex - 1 + this.contentTypes.length) % this.contentTypes.length;
-                this.goToContent(newIndex, 'backward');
+                this.goToContent(newIndex);
             }
             
-            goToContent(index, direction = 'forward') {
+            goToContent(index) {
                 if (this.isLoading || index === this.currentIndex) return;
                 
-                const prevIndex = this.currentIndex;
                 this.currentIndex = index;
                 this.updateNavigation();
-                
-                // Determine direction for animation more precisely for dot clicks
-                if (direction === 'forward' && index < prevIndex) { // E.g., if clicking from last dot to first
-                    direction = 'forward';
-                } else if (direction === 'backward' && index > prevIndex) { // E.g., if clicking from first dot to last
-                    direction = 'backward';
-                } else if (index > prevIndex) { // Normal forward movement
-                    direction = 'forward';
-                } else if (index < prevIndex) { // Normal backward movement
-                    direction = 'backward';
-                }
-
-                this.displayContent(direction);
+                this.updateCardPositions();
+                this.updateCarousel();
             }
             
             updateNavigation() {
@@ -510,6 +635,7 @@
             }
             
             async fetchWordOfTheDay() {
+                // ... existing code ...
                 try {
                     const dayIndex = new Date().getDay(); 
                     const word = this.wordList[dayIndex % this.wordList.length]; 
@@ -550,17 +676,36 @@
                     const data = await response.json();
                     
                     if (data && data.events && data.events.length > 0) {
-                        const event = data.events[0];
+                        // Get a random event from the first 5 events for variety
+                        const eventIndex = Math.floor(Math.random() * Math.min(5, data.events.length));
+                        const event = data.events[eventIndex];
+                        
                         // Format the full date for display
-                        const fullDateOptions = { month: 'long', day: 'numeric', year: 'numeric' };
-                        // Create a date object with the event year, and current month/day to format correctly.
-                        const eventDate = new Date(event.year, now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
+                        const fullDateOptions = { month: 'long', day: 'numeric' };
+                        const monthDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
+
+                        // Get a more detailed description if available
+                        let detailedDescription = '';
+                        if (event.pages && event.pages.length > 0 && event.pages[0].extract) {
+                            // Check if the extract is actually about the historical event
+                            // and not about something tangentially related
+                            const extract = event.pages[0].extract;
+                            if (extract.includes(event.year) && extract.length < 500) {
+                                detailedDescription = extract;
+                            } else {
+                                // Create our own description if the extract doesn't seem relevant
+                                detailedDescription = `On ${monthDay} in the year ${event.year}: ${event.text} This event marks an important moment in history.`;
+                            }
+                        } else {
+                            // If no detailed description is available, create a more informative one
+                            detailedDescription = `On ${monthDay} in the year ${event.year}: ${event.text} This event marks an important moment in history.`;
+                        }
 
                         this.contentData.history = {
-                            fullDate: eventDate, // New field for full date
+                            fullDate: monthDay,
                             year: event.year,
                             event: event.text,
-                            description: event.pages && event.pages[0] ? event.pages[0].extract : ''
+                            description: detailedDescription
                         };
                     } else {
                          throw new Error("No historical events found for today.");
@@ -568,18 +713,30 @@
                 } catch (error) {
                     console.error('Error fetching historical fact:', error);
                     const now = new Date(); 
-                    const fallbackFacts = [ // Example fallbacks for July 15th
-                        { year: '1099', event: 'The Crusaders captured Jerusalem, ending the First Crusade.', description: 'A pivotal moment in medieval history.' },
-                        { year: '1799', event: 'The Rosetta Stone was found by French soldiers in Rosetta (Rashid), Egypt.', description: 'Key to deciphering Egyptian hieroglyphs.' },
-                        { year: '1965', event: 'Mariner 4 transmits the first close-up pictures of Mars.', description: 'The first successful flyby of Mars by a spacecraft.' }
+                    const fallbackFacts = [ // More detailed fallback facts
+                        { 
+                            year: '1099', 
+                            event: 'The Crusaders captured Jerusalem, ending the First Crusade.', 
+                            description: 'On this day in 1099, after a difficult siege that lasted over a month, Crusader forces captured Jerusalem. This marked the culmination of the First Crusade, which had been launched by Pope Urban II in 1095. The capture of Jerusalem resulted in a massacre of the city\'s Muslim and Jewish inhabitants and established the Kingdom of Jerusalem, which lasted for nearly two centuries until 1291. This event dramatically altered the political landscape of the Middle East and relations between the Islamic world and Western Christendom for centuries to come.'
+                        },
+                        { 
+                            year: '1799', 
+                            event: 'The Rosetta Stone was found by French soldiers in Rosetta (Rashid), Egypt.', 
+                            description: 'On this day in 1799, during Napoleon\'s Egyptian campaign, French Lieutenant Pierre-François Bouchard discovered the Rosetta Stone while supervising construction work at Fort Julien near the town of Rosetta. This granodiorite stele, inscribed with three versions of the same decree (hieroglyphic, demotic, and ancient Greek), became the key that finally allowed scholars to decipher ancient Egyptian hieroglyphs. This breakthrough, largely achieved by Jean-François Champollion in 1822, opened up the entire written record of ancient Egyptian civilization to modern understanding.'
+                        },
+                        { 
+                            year: '1965', 
+                            event: 'Mariner 4 transmits the first close-up pictures of Mars.', 
+                            description: 'On this day in 1965, NASA\'s Mariner 4 spacecraft completed the first successful flyby of Mars, transmitting 21 photographs of the Martian surface back to Earth. These historic images, showing a cratered, seemingly lifeless landscape, were the first close-up pictures of another planet ever returned from deep space. The mission revealed Mars to be more Moon-like than Earth-like, contradicting many previous assumptions. Mariner 4\'s discoveries fundamentally changed our understanding of Mars and paved the way for future Mars exploration missions that continue to this day.'
+                        }
                     ];
                     const factIndex = now.getDate() % fallbackFacts.length; 
                     const fallbackData = fallbackFacts[factIndex];
-                    const fullDateOptions = { month: 'long', day: 'numeric', year: 'numeric' };
-                    const fallbackDate = new Date(fallbackData.year, now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
+                    const fullDateOptions = { month: 'long', day: 'numeric' };
+                    const monthDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
 
                     this.contentData.history = {
-                        fullDate: fallbackDate, // New field for full date in fallback
+                        fullDate: monthDay,
                         year: fallbackData.year,
                         event: fallbackData.event,
                         description: fallbackData.description
@@ -631,87 +788,67 @@
                 }
             }
             
-            displayContent(direction = 'forward') { 
-                const contentType = this.contentTypes[this.currentIndex];
-                const data = this.contentData[contentType.type];
-                const card = document.getElementById('content-card');
-            
-                if (!data) {
-                    this.showError('Content not available. Please try refreshing.');
-                    return;
-                }
-            
-                // Step 1: Animate the current card out
-                if (direction !== 'initial') { // Skip animation on first load
-                    card.classList.remove('active-transition'); 
-                    if (direction === 'forward') {
-                        card.classList.add('slide-out-left');
-                    } else {
-                        card.classList.add('slide-out-right');
-                    }
-                }
-            
-                // Step 2: Update content after a short delay (for exit animation to start)
-                const updateDelay = (direction === 'initial') ? 0 : 200; // Shorter delay for snappier feel
-            
-                setTimeout(() => {
-                    // Reset card position and opacity before updating content
-                    card.classList.remove('slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right');
+            updateCarousel() {
+                // Update content for all cards
+                this.cards.forEach((card, index) => {
+                    const contentType = this.contentTypes[index];
+                    const data = this.contentData[contentType.type];
                     
-                    document.getElementById('content-type').textContent = contentType.title;
+                    if (!data) {
+                        this.showErrorOnCard(card, 'Content not available');
+                        return;
+                    }
+                    
+                    const typeEl = card.querySelector('.content-type');
+                    const titleEl = card.querySelector('.content-title');
+                    const bodyEl = card.querySelector('.content-body');
+                    const metaEl = card.querySelector('.content-meta');
+                    
+                    typeEl.textContent = contentType.title;
                     
                     switch (contentType.type) {
                         case 'word':
-                            document.getElementById('content-title').textContent = data.word.toUpperCase();
-                            document.getElementById('content-body').textContent = data.definition;
-                            document.getElementById('content-meta').textContent = data.example;
+                            titleEl.textContent = data.word.toUpperCase();
+                            bodyEl.textContent = data.definition;
+                            metaEl.textContent = data.example;
                             break;
                             
                         case 'history':
-                            document.getElementById('content-title').textContent = data.fullDate; // Use fullDate
-                            document.getElementById('content-body').textContent = data.event;
-                            document.getElementById('content-meta').textContent = data.description;
+                            titleEl.textContent = `${data.fullDate}, ${data.year}`;
+                            bodyEl.innerHTML = `<strong>Historical Event:</strong><br>${data.event}`;
+                            metaEl.textContent = data.description;
                             break;
                             
                         case 'random':
-                            document.getElementById('content-title').textContent = 'Did You Know?';
-                            document.getElementById('content-body').textContent = data.fact;
-                            document.getElementById('content-meta').textContent = ''; 
+                            titleEl.textContent = 'Did You Know?';
+                            bodyEl.textContent = data.fact;
+                            metaEl.textContent = ''; 
                             break;
                             
                         case 'quote':
-                            document.getElementById('content-title').textContent = '"' + data.text + '"';
-                            document.getElementById('content-body').textContent = ''; 
-                            document.getElementById('content-meta').textContent = '— ' + data.author;
+                            titleEl.textContent = '"' + data.text + '"';
+                            bodyEl.textContent = ''; 
+                            metaEl.textContent = '— ' + data.author;
                             break;
                     }
+                });
+            }
             
-                    // Step 3: Animate the new content in
-                    if (direction !== 'initial') {
-                        if (direction === 'forward') {
-                            card.classList.add('slide-in-right');
-                        } else {
-                            card.classList.add('slide-in-left');
-                        }
-                        // Trigger reflow to ensure the 'slide-in' class is applied before the 'active-transition' takes effect
-                        card.offsetWidth; 
-                        card.classList.add('active-transition'); // Trigger transition to final position
-                        setTimeout(() => {
-                            // Clean up after animation
-                            card.classList.remove('slide-in-left', 'slide-in-right');
-                        }, 250); // Match CSS transition duration
-                    } else {
-                         // For initial load, ensure it's in default state
-                         card.classList.add('active-transition');
-                    }
-                }, updateDelay);
+            showErrorOnCard(card, message) {
+                const typeEl = card.querySelector('.content-type');
+                const titleEl = card.querySelector('.content-title');
+                const bodyEl = card.querySelector('.content-body');
+                const metaEl = card.querySelector('.content-meta');
+                
+                typeEl.textContent = 'Error';
+                titleEl.textContent = '';
+                bodyEl.innerHTML = `<span class="error">${message}</span>`;
+                metaEl.textContent = '';
             }
             
             showError(message) {
-                document.getElementById('content-type').textContent = 'Error';
-                document.getElementById('content-title').textContent = '';
-                document.getElementById('content-body').innerHTML = `<span class=\"error\">${message}</span>`;
-                document.getElementById('content-meta').textContent = '';
+                // Show error on current card
+                this.showErrorOnCard(this.cards[this.currentIndex], message);
             }
         }
         
