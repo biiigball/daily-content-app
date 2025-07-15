@@ -922,3 +922,598 @@
     </script>
 </body>
 </html>
+<script>
+class DailyContentApp {
+    constructor() {
+        this.currentIndex = 0;
+        this.contentTypes = [
+            { type: 'word', title: 'Word of the Day' },
+            { type: 'history', title: 'Historical Fact' },
+            { type: 'random', title: 'Random Fact' },
+            { type: 'quote', title: 'Quote of the Day' }
+        ];
+        this.contentData = {};
+        this.isLoading = false;
+        this.touchStartX = 0;
+        this.touchMoveX = 0;
+        this.touchEndX = 0;
+        this.isSwiping = false;
+        this.isDragging = false;
+        this.startTime = 0;
+        this.cards = [];
+        
+        // Hardcoded word list for daily rotation
+        this.wordList = [
+            'serendipity', 'ephemeral', 'petrichor', 'luminous', 'mellifluous',
+            'ethereal', 'tranquil', 'vivacious', 'ubiquitous', 'cacophony'
+        ];
+        
+        this.init();
+    }
+    
+    // Get today's date as a string for localStorage key
+    getTodayKey() {
+        const today = new Date();
+        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    }
+    
+    // Check if we have cached data for today
+    loadCachedData() {
+        const todayKey = this.getTodayKey();
+        const cachedData = localStorage.getItem(`dailyContent_${todayKey}`);
+        
+        if (cachedData) {
+            try {
+                this.contentData = JSON.parse(cachedData);
+                // Validate content types exist in cached data for current app version
+                for (const typeDef of this.contentTypes) {
+                    if (!this.contentData[typeDef.type]) {
+                        console.warn(`Cached data missing content for type: ${typeDef.type}. Refetching all.`);
+                        return false; 
+                    }
+                }
+                return true;
+            } catch (error) {
+                console.error('Error parsing cached data:', error);
+                localStorage.removeItem(`dailyContent_${todayKey}`); 
+            }
+        }
+        return false;
+    }
+    
+    // Save today's content to localStorage
+    saveCachedData() {
+        const todayKey = this.getTodayKey();
+        try {
+            localStorage.setItem(`dailyContent_${todayKey}`, JSON.stringify(this.contentData));
+            this.cleanupOldCache();
+        } catch (error) {
+            console.error('Error saving cached data:', error);
+        }
+    }
+    
+    // Remove cached data from previous days
+    cleanupOldCache() {
+        const todayKey = this.getTodayKey();
+        const keysToRemove = [];
+        
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('dailyContent_') && key !== `dailyContent_${todayKey}`) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+    }
+    
+    init() {
+        this.updateDate();
+        this.createCards();
+        this.setupEventListeners();
+        this.updateNavigation(); 
+        
+        if (this.loadCachedData()) {
+            console.log('Loaded cached data for today');
+            this.updateCarousel(); // Display without animation on initial load
+        } else {
+            console.log('No cached data found, fetching fresh content');
+            this.loadAllContent().then(() => {
+                this.saveCachedData(); 
+                this.updateCarousel(); // Display without animation on initial load
+            });
+        }
+    }
+    
+    createCards() {
+        const carousel = document.getElementById('carousel');
+        carousel.innerHTML = '';
+        
+        // Create a card for each content type
+        this.contentTypes.forEach((_, index) => {
+            const card = document.createElement('div');
+            card.classList.add('content-card');
+            card.innerHTML = `
+                <div class="content-type">Loading...</div>
+                <div class="content-title"></div>
+                <div class="content-body">Getting your daily content...</div>
+                <div class="content-meta"></div>
+                <div class="scroll-hint" style="display: none;">Scroll for more</div>
+            `;
+            carousel.appendChild(card);
+            this.cards.push(card);
+        });
+        
+        // Set initial positions
+        this.updateCardPositions();
+    }
+    
+    updateDate() {
+        const now = new Date();
+        const options = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        };
+        document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
+    }
+    
+    setupEventListeners() {
+        const carousel = document.getElementById('carousel');
+        const dotsContainer = document.querySelector('.navigation');
+        
+        // Tap navigation
+        carousel.addEventListener('click', (e) => {
+            if (this.isLoading || this.isDragging) {
+                this.isDragging = false;
+                return;
+            }
+            this.nextContent();
+        });
+        
+        // Dot navigation
+        dotsContainer.addEventListener('click', (e) => {
+            const dot = e.target.closest('.nav-dot');
+            if (dot && dot.dataset.index) {
+                this.goToContent(parseInt(dot.dataset.index));
+            }
+        });
+        
+        // Touch events for swipe and drag
+        carousel.addEventListener('touchstart', (e) => {
+            if (this.isLoading) return;
+            
+            this.touchStartX = e.touches[0].clientX;
+            this.isDragging = true;
+            this.startTime = Date.now();
+            
+            // Disable transitions during dragging for immediate response
+            this.cards.forEach(card => {
+                card.style.transition = 'none';
+            });
+            
+            e.preventDefault();
+        }, { passive: false });
+        
+        carousel.addEventListener('touchmove', (e) => {
+            if (!this.isDragging || this.isLoading) return;
+            
+            this.touchMoveX = e.touches[0].clientX;
+            const deltaX = this.touchMoveX - this.touchStartX;
+            
+            // Update card positions based on finger movement
+            this.updateCardPositionsDuringDrag(deltaX);
+            
+            e.preventDefault();
+        }, { passive: false });
+        
+        carousel.addEventListener('touchend', (e) => {
+            if (!this.isDragging || this.isLoading) return;
+            
+            // Re-enable smooth transitions
+            this.cards.forEach(card => {
+                card.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.4s ease';
+            });
+            
+            this.touchEndX = e.changedTouches[0].clientX;
+            const deltaX = this.touchEndX - this.touchStartX;
+            const timeDiff = Date.now() - this.startTime;
+            const velocity = Math.abs(deltaX) / timeDiff;
+            
+            // Improved swipe detection with velocity consideration
+            if (Math.abs(deltaX) > 40 || (Math.abs(deltaX) > 20 && velocity > 0.5)) {
+                if (deltaX < 0) {
+                    this.nextContent();
+                } else {
+                    this.prevContent();
+                }
+            } else {
+                // If not a significant swipe, reset to current position with animation
+                this.updateCardPositions();
+            }
+            
+            this.isDragging = false;
+        }, { passive: false });
+
+        // Add event listeners to check for scrollable content
+        this.cards.forEach(card => {
+            const bodyEl = card.querySelector('.content-body');
+            const metaEl = card.querySelector('.content-meta');
+            const scrollHintEl = card.querySelector('.scroll-hint');
+            
+            // Check if content is scrollable
+            const checkScrollable = () => {
+                if ((bodyEl.scrollHeight > bodyEl.clientHeight) || 
+                    (metaEl.scrollHeight > metaEl.clientHeight)) {
+                    scrollHintEl.style.display = 'block';
+                } else {
+                    scrollHintEl.style.display = 'none';
+                }
+            };
+            
+            // Check on content update
+            const observer = new MutationObserver(checkScrollable);
+            observer.observe(bodyEl, { childList: true, subtree: true, characterData: true });
+            observer.observe(metaEl, { childList: true, subtree: true, characterData: true });
+            
+            // Prevent card navigation when scrolling content
+            bodyEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+            metaEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+        });
+    }
+    
+    updateCardPositionsDuringDrag(deltaX) {
+        const cardWidth = this.cards[0].offsetWidth;
+        const maxDrag = cardWidth * 0.5; // Limit drag distance
+        const normalizedDelta = Math.max(Math.min(deltaX, maxDrag), -maxDrag);
+        const dragPercent = normalizedDelta / cardWidth;
+        
+        // Calculate positions for each card based on drag
+        this.cards.forEach((card, index) => {
+            let position;
+            const relativeIndex = this.getRelativeIndex(index);
+            
+            switch(relativeIndex) {
+                case -1: // prev card
+                    position = -70 + (dragPercent * 100);
+                    card.style.transform = `translateX(${position}%) scale(0.85)`;
+                    card.style.opacity = 0.7 + (dragPercent * 0.3);
+                    break;
+                case 0: // current card
+                    position = dragPercent * 100;
+                    card.style.transform = `translateX(${position}%) scale(${1 - Math.abs(dragPercent) * 0.15})`;
+                    card.style.opacity = 1 - Math.abs(dragPercent) * 0.3;
+                    break;
+                case 1: // next card
+                    position = 70 + (dragPercent * 100);
+                    card.style.transform = `translateX(${position}%) scale(0.85)`;
+                    card.style.opacity = 0.7 - (dragPercent * 0.3);
+                    break;
+                default: // other cards
+                    card.style.opacity = '0';
+                    break;
+            }
+        });
+    }
+    
+    getRelativeIndex(index) {
+        const diff = index - this.currentIndex;
+        const total = this.contentTypes.length;
+        
+        if (diff === 0) return 0;
+        if (diff === 1 || diff === 1 - total) return 1;
+        if (diff === -1 || diff === total - 1) return -1;
+        return diff;
+    }
+    
+    updateCardPositions() {
+        this.cards.forEach((card, index) => {
+            // Remove all position classes
+            card.classList.remove('active', 'prev', 'next', 'inactive');
+            
+            // Determine position based on index relative to current
+            const relativeIndex = this.getRelativeIndex(index);
+            
+            if (relativeIndex === 0) {
+                card.classList.add('active');
+            } else if (relativeIndex === -1) {
+                card.classList.add('prev');
+            } else if (relativeIndex === 1) {
+                card.classList.add('next');
+            } else {
+                card.classList.add('inactive');
+            }
+        });
+    }
+    
+    nextContent() {
+        if (this.isLoading) return;
+        const newIndex = (this.currentIndex + 1) % this.contentTypes.length;
+        this.goToContent(newIndex);
+    }
+    
+    prevContent() {
+        if (this.isLoading) return;
+        const newIndex = (this.currentIndex - 1 + this.contentTypes.length) % this.contentTypes.length;
+        this.goToContent(newIndex);
+    }
+    
+    goToContent(index) {
+        if (this.isLoading || index === this.currentIndex) return;
+        
+        this.currentIndex = index;
+        this.updateNavigation();
+        this.updateCardPositions();
+        this.updateCarousel();
+    }
+    
+    updateNavigation() {
+        const navContainer = document.querySelector('.navigation');
+        navContainer.innerHTML = ''; 
+        this.contentTypes.forEach((_, index) => {
+            const dot = document.createElement('div');
+            dot.classList.add('nav-dot');
+            dot.dataset.index = index;
+            navContainer.appendChild(dot);
+        });
+        
+        const dots = document.querySelectorAll('.nav-dot');
+        dots.forEach((dot, index) => {
+            dot.classList.toggle('active', index === this.currentIndex);
+        });
+    }
+    
+    async loadAllContent() {
+        this.isLoading = true;
+        try {
+            await Promise.all([
+                this.fetchWordOfTheDay(),
+                this.fetchHistoricalFact(),
+                this.fetchRandomFact(),
+                this.fetchQuoteOfTheDay()
+            ]);
+        } catch (error) {
+            console.error('Error loading content:', error);
+            this.showError('Failed to load content. Please try again later.');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+    
+    async fetchWordOfTheDay() {
+        try {
+            const dayIndex = new Date().getDay(); 
+            const word = this.wordList[dayIndex % this.wordList.length]; 
+            
+            const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+            const data = await response.json();
+            
+            if (data && data[0]) {
+                const entry = data[0];
+                const meaning = entry.meanings[0];
+                const definition = meaning.definitions[0];
+                
+                this.contentData.word = {
+                    word: word,
+                    definition: definition.definition,
+                    example: definition.example || `"${word}" is a beautiful word.`
+                };
+            } else {
+                throw new Error("No definition found for word.");
+            }
+        } catch (error) {
+            console.error('Error fetching word:', error);
+            this.contentData.word = {
+                word: 'serendipity',
+                definition: 'The occurrence and development of events by chance in a happy or beneficial way.',
+                example: 'A fortunate stroke of serendipity brought them together.'
+            };
+        }
+    }
+    
+    async fetchHistoricalFact() {
+        try {
+            const now = new Date();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            
+            const response = await fetch(`https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/${month}/${day}`);
+            const data = await response.json();
+            
+            if (data && data.events && data.events.length > 0) {
+                // Get a random event from the first 5 events for variety
+                const eventIndex = Math.floor(Math.random() * Math.min(5, data.events.length));
+                const event = data.events[eventIndex];
+                
+                // Format the full date for display
+                const fullDateOptions = { month: 'long', day: 'numeric' };
+                const monthDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
+
+                // Get a more detailed description if available
+                let detailedDescription = '';
+                if (event.pages && event.pages.length > 0 && event.pages[0].extract) {
+                    // Check if the extract is actually about the historical event
+                    // and not about something tangentially related
+                    const extract = event.pages[0].extract;
+                    if (extract.includes(event.year) && extract.length < 500) {
+                        detailedDescription = extract;
+                    } else {
+                        // Create our own description if the extract doesn't seem relevant
+                        detailedDescription = `On ${monthDay} in the year ${event.year}: ${event.text} This event marks an important moment in history.`;
+                    }
+                } else {
+                    // If no detailed description is available, create a more informative one
+                    detailedDescription = `On ${monthDay} in the year ${event.year}: ${event.text} This event marks an important moment in history.`;
+                }
+
+                this.contentData.history = {
+                    fullDate: monthDay,
+                    year: event.year,
+                    event: event.text,
+                    description: detailedDescription
+                };
+            } else {
+                 throw new Error("No historical events found for today.");
+            }
+        } catch (error) {
+            console.error('Error fetching historical fact:', error);
+            const now = new Date(); 
+            const fallbackFacts = [ // More detailed fallback facts
+                { 
+                    year: '1099', 
+                    event: 'The Crusaders captured Jerusalem, ending the First Crusade.', 
+                    description: 'On this day in 1099, after a difficult siege that lasted over a month, Crusader forces captured Jerusalem. This marked the culmination of the First Crusade, which had been launched by Pope Urban II in 1095. The capture of Jerusalem resulted in a massacre of the city\'s Muslim and Jewish inhabitants and established the Kingdom of Jerusalem, which lasted for nearly two centuries until 1291. This event dramatically altered the political landscape of the Middle East and relations between the Islamic world and Western Christendom for centuries to come.'
+                },
+                { 
+                    year: '1799', 
+                    event: 'The Rosetta Stone was found by French soldiers in Rosetta (Rashid), Egypt.', 
+                    description: 'On this day in 1799, during Napoleon\'s Egyptian campaign, French Lieutenant Pierre-François Bouchard discovered the Rosetta Stone while supervising construction work at Fort Julien near the town of Rosetta. This granodiorite stele, inscribed with three versions of the same decree (hieroglyphic, demotic, and ancient Greek), became the key that finally allowed scholars to decipher ancient Egyptian hieroglyphs. This breakthrough, largely achieved by Jean-François Champollion in 1822, opened up the entire written record of ancient Egyptian civilization to modern understanding.'
+                },
+                { 
+                    year: '1965', 
+                    event: 'Mariner 4 transmits the first close-up pictures of Mars.', 
+                    description: 'On this day in 1965, NASA\'s Mariner 4 spacecraft completed the first successful flyby of Mars, transmitting 21 photographs of the Martian surface back to Earth. These historic images, showing a cratered, seemingly lifeless landscape, were the first close-up pictures of another planet ever returned from deep space. The mission revealed Mars to be more Moon-like than Earth-like, contradicting many previous assumptions. Mariner 4\'s discoveries fundamentally changed our understanding of Mars and paved the way for future Mars exploration missions that continue to this day.'
+                }
+            ];
+            const factIndex = now.getDate() % fallbackFacts.length; 
+            const fallbackData = fallbackFacts[factIndex];
+            const fullDateOptions = { month: 'long', day: 'numeric' };
+            const monthDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
+
+            this.contentData.history = {
+                fullDate: monthDay,
+                year: fallbackData.year,
+                event: fallbackData.event,
+                description: fallbackData.description
+            };
+        }
+    }
+    
+    async fetchRandomFact() {
+        try {
+            const response = await fetch('https://uselessfacts.jsph.pl/random.json?language=en');
+            const data = await response.json();
+            
+            if (data && data.text) {
+                this.contentData.random = {
+                    fact: data.text,
+                    source: data.source_url || ''
+                };
+            } else {
+                throw new Error("No random fact found.");
+            }
+        } catch (error) {
+            console.error('Error fetching random fact:', error);
+            this.contentData.random = {
+                fact: 'Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3000 years old and still perfectly edible.',
+                source: ''
+            };
+        }
+    }
+    
+    async fetchQuoteOfTheDay() {
+        try {
+            const response = await fetch('https://zenquotes.io/api/today');
+            const data = await response.json();
+            
+            if (data && data[0]) {
+                this.contentData.quote = {
+                    text: data[0].q,
+                    author: data[0].a
+                };
+            } else {
+                throw new Error("No quote found.");
+            }
+        } catch (error) {
+            console.error('Error fetching quote:', error);
+            this.contentData.quote = {
+                text: 'The only way to do great work is to love what you do.',
+                author: 'Steve Jobs'
+            };
+        }
+    }
+    
+    updateCarousel() {
+        // Update content for all cards
+        this.cards.forEach((card, index) => {
+            const contentType = this.contentTypes[index];
+            const data = this.contentData[contentType.type];
+            
+            if (!data) {
+                this.showErrorOnCard(card, 'Content not available');
+                return;
+            }
+            
+            const typeEl = card.querySelector('.content-type');
+            const titleEl = card.querySelector('.content-title');
+            const bodyEl = card.querySelector('.content-body');
+            const metaEl = card.querySelector('.content-meta');
+            const scrollHintEl = card.querySelector('.scroll-hint');
+            
+            typeEl.textContent = contentType.title;
+            
+            switch (contentType.type) {
+                case 'word':
+                    titleEl.textContent = data.word.toUpperCase();
+                    bodyEl.textContent = data.definition;
+                    metaEl.textContent = data.example;
+                    break;
+                    
+                case 'history':
+                    titleEl.textContent = `${data.fullDate}, ${data.year}`;
+                    bodyEl.innerHTML = data.event;
+                    // Add expand/collapse arrow
+                    metaEl.innerHTML = `${data.description} <span class="expand-arrow" style="cursor:pointer;float:right;">${this.expandedHistory ? '&#9650;' : '&#9660;'}</span>`;
+                    metaEl.style.maxHeight = this.expandedHistory ? '300px' : '80px';
+                    metaEl.style.overflowY = this.expandedHistory ? 'auto' : 'hidden';
+                    metaEl.style.cursor = 'pointer';
+                    break;
+                    
+                case 'random':
+                    titleEl.textContent = 'Did You Know?';
+                    bodyEl.textContent = data.fact;
+                    metaEl.textContent = ''; 
+                    break;
+                    
+                case 'quote':
+                    titleEl.textContent = '"' + data.text + '"';
+                    bodyEl.textContent = ''; 
+                    metaEl.textContent = '— ' + data.author;
+                    break;
+            }
+            
+            // Check if content is scrollable and show hint if needed
+            setTimeout(() => {
+                if ((bodyEl.scrollHeight > bodyEl.clientHeight) || 
+                    (metaEl.scrollHeight > metaEl.clientHeight)) {
+                    scrollHintEl.style.display = 'block';
+                } else {
+                    scrollHintEl.style.display = 'none';
+                }
+            }, 100); // Small delay to ensure content is rendered
+        });
+    }
+    
+    showErrorOnCard(card, message) {
+        const typeEl = card.querySelector('.content-type');
+        const titleEl = card.querySelector('.content-title');
+        const bodyEl = card.querySelector('.content-body');
+        const metaEl = card.querySelector('.content-meta');
+        
+        typeEl.textContent = 'Error';
+        titleEl.textContent = '';
+        bodyEl.innerHTML = `<span class="error">${message}</span>`;
+        metaEl.textContent = '';
+    }
+    
+    showError(message) {
+        // Show error on current card
+        this.showErrorOnCard(this.cards[this.currentIndex], message);
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    new DailyContentApp();
+});
+</script>
+</body>
+</html>
