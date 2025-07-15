@@ -4,15 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Daily Content</title>
-    
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico"> <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <!-- Favicon block: wide browser support -->
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+
+    <!-- iOS PWA meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Daily Content">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"> 
-
-    <link rel="manifest" href="/site.webmanifest">
     
     <style>
         * {
@@ -547,7 +551,13 @@
                     
                     if (data && data.events && data.events.length > 0) {
                         const event = data.events[0];
+                        // Format the full date for display
+                        const fullDateOptions = { month: 'long', day: 'numeric', year: 'numeric' };
+                        // Create a date object with the event year, and current month/day to format correctly.
+                        const eventDate = new Date(event.year, now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
+
                         this.contentData.history = {
+                            fullDate: eventDate, // New field for full date
                             year: event.year,
                             event: event.text,
                             description: event.pages && event.pages[0] ? event.pages[0].extract : ''
@@ -564,7 +574,16 @@
                         { year: '1965', event: 'Mariner 4 transmits the first close-up pictures of Mars.', description: 'The first successful flyby of Mars by a spacecraft.' }
                     ];
                     const factIndex = now.getDate() % fallbackFacts.length; 
-                    this.contentData.history = fallbackFacts[factIndex];
+                    const fallbackData = fallbackFacts[factIndex];
+                    const fullDateOptions = { month: 'long', day: 'numeric', year: 'numeric' };
+                    const fallbackDate = new Date(fallbackData.year, now.getMonth(), now.getDate()).toLocaleDateString('en-US', fullDateOptions);
+
+                    this.contentData.history = {
+                        fullDate: fallbackDate, // New field for full date in fallback
+                        year: fallbackData.year,
+                        event: fallbackData.event,
+                        description: fallbackData.description
+                    };
                 }
             }
             
@@ -649,7 +668,7 @@
                             break;
                             
                         case 'history':
-                            document.getElementById('content-title').textContent = data.year;
+                            document.getElementById('content-title').textContent = data.fullDate; // Use fullDate
                             document.getElementById('content-body').textContent = data.event;
                             document.getElementById('content-meta').textContent = data.description;
                             break;
