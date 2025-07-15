@@ -85,7 +85,7 @@
             max-width: 400px;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.15s ease, opacity 0.15s ease; /* Snappier animation */
+            transition: transform 0.25s ease-out, opacity 0.25s ease-out; /* Snappier animation */
             user-select: none;
             position: relative;
             min-height: 300px; /* Default min-height */
@@ -101,7 +101,7 @@
             transform: translateY(-2px);
         }
         
-        /* New animation classes for directional sliding */
+        /* Animation classes for directional sliding */
         .content-card.slide-out-left {
             transform: translateX(-100%);
             opacity: 0;
@@ -290,8 +290,7 @@
                     { type: 'word', title: 'Word of the Day' },
                     { type: 'history', title: 'Historical Fact' },
                     { type: 'random', title: 'Random Fact' },
-                    { type: 'quote', title: 'Quote of the Day' },
-                    { type: 'bible', title: 'Bible Verse of the Day' }
+                    { type: 'quote', title: 'Quote of the Day' }
                 ];
                 this.contentData = {};
                 this.isLoading = false;
@@ -322,6 +321,7 @@
                 if (cachedData) {
                     try {
                         this.contentData = JSON.parse(cachedData);
+                        // Validate content types exist in cached data for current app version
                         for (const typeDef of this.contentTypes) {
                             if (!this.contentData[typeDef.type]) {
                                 console.warn(`Cached data missing content for type: ${typeDef.type}. Refetching all.`);
@@ -459,18 +459,16 @@
                 this.currentIndex = index;
                 this.updateNavigation();
                 
-                // Determine direction for animation more precisely
-                // If direct dot click, calculate direction based on index difference
-                if (direction === 'forward' && index < prevIndex) { // E.g., from last dot to first dot
+                // Determine direction for animation more precisely for dot clicks
+                if (direction === 'forward' && index < prevIndex) { // E.g., if clicking from last dot to first
                     direction = 'forward';
-                } else if (direction === 'backward' && index > prevIndex) { // E.g., from first dot to last dot
+                } else if (direction === 'backward' && index > prevIndex) { // E.g., if clicking from first dot to last
                     direction = 'backward';
-                } else if (index > prevIndex) {
+                } else if (index > prevIndex) { // Normal forward movement
                     direction = 'forward';
-                } else if (index < prevIndex) {
+                } else if (index < prevIndex) { // Normal backward movement
                     direction = 'backward';
                 }
-                // If indexes are equal, no change, or 'initial' state handled by displayContent
 
                 this.displayContent(direction);
             }
@@ -498,8 +496,7 @@
                         this.fetchWordOfTheDay(),
                         this.fetchHistoricalFact(),
                         this.fetchRandomFact(),
-                        this.fetchQuoteOfTheDay(),
-                        this.fetchBibleVerseOfTheDay()
+                        this.fetchQuoteOfTheDay()
                     ]);
                 } catch (error) {
                     console.error('Error loading content:', error);
@@ -562,13 +559,13 @@
                 } catch (error) {
                     console.error('Error fetching historical fact:', error);
                     const now = new Date(); 
-                    const july15thFacts = [
+                    const fallbackFacts = [ // Example fallbacks for July 15th
                         { year: '1099', event: 'The Crusaders captured Jerusalem, ending the First Crusade.', description: 'A pivotal moment in medieval history.' },
                         { year: '1799', event: 'The Rosetta Stone was found by French soldiers in Rosetta (Rashid), Egypt.', description: 'Key to deciphering Egyptian hieroglyphs.' },
                         { year: '1965', event: 'Mariner 4 transmits the first close-up pictures of Mars.', description: 'The first successful flyby of Mars by a spacecraft.' }
                     ];
-                    const factIndex = now.getDate() % july15thFacts.length; 
-                    this.contentData.history = july15thFacts[factIndex];
+                    const factIndex = now.getDate() % fallbackFacts.length; 
+                    this.contentData.history = fallbackFacts[factIndex];
                 }
             }
             
@@ -615,30 +612,8 @@
                     };
                 }
             }
-
-            async fetchBibleVerseOfTheDay() {
-                try {
-                    const response = await fetch('https://beta.ourmanna.com/api/v1/get?format=json&order=daily');
-                    const data = await response.json();
-                    
-                    if (data && data.verse && data.verse.details) {
-                        this.contentData.bible = {
-                            text: data.verse.details.text,
-                            reference: data.verse.details.reference
-                        };
-                    } else {
-                        throw new Error("No Bible verse found.");
-                    }
-                } catch (error) {
-                    console.error('Error fetching Bible verse:', error);
-                    this.contentData.bible = {
-                        text: 'For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life.',
-                        reference: 'John 3:16'
-                    };
-                }
-            }
             
-            displayContent(direction = 'forward') { // Default to 'forward' for general navigation
+            displayContent(direction = 'forward') { 
                 const contentType = this.contentTypes[this.currentIndex];
                 const data = this.contentData[contentType.type];
                 const card = document.getElementById('content-card');
@@ -650,7 +625,7 @@
             
                 // Step 1: Animate the current card out
                 if (direction !== 'initial') { // Skip animation on first load
-                    card.classList.remove('active-transition'); // Ensure no lingering transition class
+                    card.classList.remove('active-transition'); 
                     if (direction === 'forward') {
                         card.classList.add('slide-out-left');
                     } else {
@@ -659,39 +634,37 @@
                 }
             
                 // Step 2: Update content after a short delay (for exit animation to start)
-                // If initial load, update immediately
-                const updateDelay = (direction === 'initial') ? 0 : 80; 
+                const updateDelay = (direction === 'initial') ? 0 : 200; // Shorter delay for snappier feel
             
                 setTimeout(() => {
                     // Reset card position and opacity before updating content
                     card.classList.remove('slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right');
                     
                     document.getElementById('content-type').textContent = contentType.title;
+                    
                     switch (contentType.type) {
                         case 'word':
                             document.getElementById('content-title').textContent = data.word.toUpperCase();
                             document.getElementById('content-body').textContent = data.definition;
                             document.getElementById('content-meta').textContent = data.example;
                             break;
+                            
                         case 'history':
                             document.getElementById('content-title').textContent = data.year;
                             document.getElementById('content-body').textContent = data.event;
                             document.getElementById('content-meta').textContent = data.description;
                             break;
+                            
                         case 'random':
                             document.getElementById('content-title').textContent = 'Did You Know?';
                             document.getElementById('content-body').textContent = data.fact;
-                            document.getElementById('content-meta').textContent = '';
+                            document.getElementById('content-meta').textContent = ''; 
                             break;
+                            
                         case 'quote':
                             document.getElementById('content-title').textContent = '"' + data.text + '"';
-                            document.getElementById('content-body').textContent = '';
+                            document.getElementById('content-body').textContent = ''; 
                             document.getElementById('content-meta').textContent = '— ' + data.author;
-                            break;
-                        case 'bible':
-                            document.getElementById('content-title').textContent = data.reference;
-                            document.getElementById('content-body').textContent = '"' + data.text + '"';
-                            document.getElementById('content-meta').textContent = '';
                             break;
                     }
             
@@ -708,7 +681,7 @@
                         setTimeout(() => {
                             // Clean up after animation
                             card.classList.remove('slide-in-left', 'slide-in-right');
-                        }, 150); // Match CSS transition duration
+                        }, 250); // Match CSS transition duration
                     } else {
                          // For initial load, ensure it's in default state
                          card.classList.add('active-transition');
