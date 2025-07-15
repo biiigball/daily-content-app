@@ -97,18 +97,20 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             width: 100%;
             max-width: 400px;
+            min-height: 400px;
             text-align: center;
             cursor: pointer;
             user-select: none;
             position: absolute;
-            height: 350px; /* Standardized fixed height for all cards */
+            height: 85vh; /* Fill most of the viewport height */
             display: flex;
             flex-direction: column;
-            justify-content: flex-start; /* Align content to top instead of center */
+            /* Ensure children can grow to fill vertical space */
+            justify-content: flex-start;
             transition: transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.4s ease; /* Smoother transition */
             will-change: transform, opacity; /* Optimize for animations */
             backface-visibility: hidden; /* Prevent flickering during animations */
-            overflow-y: auto; /* Allow scrolling if content is too long */
+            overflow-y: hidden; /* Remove free scrolling */
             -webkit-overflow-scrolling: touch; /* Enable momentum scrolling on iOS */
         }
         
@@ -150,7 +152,7 @@
         .content-title {
             font-size: 1.4rem;
             color: #333;
-            margin-bottom: 20px;
+            margin-bottom: 10px; /* Reduce gap below title */
             font-weight: 600;
         }
         
@@ -158,8 +160,8 @@
             font-size: 1rem;
             color: #555;
             line-height: 1.7;
-            margin-bottom: 20px;
-            flex-grow: 1; /* Allow body to grow and fill space */
+            margin-bottom: 0;
+            flex-shrink: 0;
             overflow-y: auto; /* Add scrolling if needed */
             text-align: left; /* Left-align text for better readability */
             padding: 0 5px; /* Add a bit of padding */
@@ -167,14 +169,14 @@
         }
         
         .content-meta {
-            font-size: 0.9rem;
-            color: #888;
-            font-style: italic;
-            overflow-y: auto; /* Allow meta to scroll if needed */
-            max-height: 80px; /* Limit height to ensure it doesn't push other content */
-            text-align: left; /* Left-align text */
-            padding: 0 5px; /* Add padding */
-        }
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 0;
+    margin-top: 10px;
+    line-height: 1.7;
+    color: #444;
+    text-align: left;
+}
         
         .swipe-hint {
             text-align: center;
@@ -247,9 +249,10 @@
             }
             
             .content-card {
-                max-width: 300px; 
+                max-width: 98vw;
                 padding: 20px 15px; 
-                height: 250px; /* Standardized height for mobile */
+                height: 88vh; /* Even taller on mobile */
+                min-height: 350px;
                 margin-top: -30px; /* Move card up from center */
             }
             
@@ -470,13 +473,16 @@
                 const carousel = document.getElementById('carousel');
                 const dotsContainer = document.querySelector('.navigation');
                 
-                // Tap navigation
+                // Tap navigation: left = prev, right = next
                 carousel.addEventListener('click', (e) => {
-                    if (this.isLoading || this.isDragging) {
-                        this.isDragging = false;
-                        return;
+                    if (this.isLoading) return;
+                    const rect = carousel.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    if (x < rect.width / 2) {
+                        this.prevContent();
+                    } else {
+                        this.nextContent();
                     }
-                    this.nextContent();
                 });
                 
                 // Dot navigation
@@ -485,88 +491,6 @@
                     if (dot && dot.dataset.index) {
                         this.goToContent(parseInt(dot.dataset.index));
                     }
-                });
-                
-                // Touch events for swipe and drag
-                carousel.addEventListener('touchstart', (e) => {
-                    if (this.isLoading) return;
-                    
-                    this.touchStartX = e.touches[0].clientX;
-                    this.isDragging = true;
-                    this.startTime = Date.now();
-                    
-                    // Disable transitions during dragging for immediate response
-                    this.cards.forEach(card => {
-                        card.style.transition = 'none';
-                    });
-                    
-                    e.preventDefault();
-                }, { passive: false });
-                
-                carousel.addEventListener('touchmove', (e) => {
-                    if (!this.isDragging || this.isLoading) return;
-                    
-                    this.touchMoveX = e.touches[0].clientX;
-                    const deltaX = this.touchMoveX - this.touchStartX;
-                    
-                    // Update card positions based on finger movement
-                    this.updateCardPositionsDuringDrag(deltaX);
-                    
-                    e.preventDefault();
-                }, { passive: false });
-                
-                carousel.addEventListener('touchend', (e) => {
-                    if (!this.isDragging || this.isLoading) return;
-                    
-                    // Re-enable smooth transitions
-                    this.cards.forEach(card => {
-                        card.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.4s ease';
-                    });
-                    
-                    this.touchEndX = e.changedTouches[0].clientX;
-                    const deltaX = this.touchEndX - this.touchStartX;
-                    const timeDiff = Date.now() - this.startTime;
-                    const velocity = Math.abs(deltaX) / timeDiff;
-                    
-                    // Improved swipe detection with velocity consideration
-                    if (Math.abs(deltaX) > 40 || (Math.abs(deltaX) > 20 && velocity > 0.5)) {
-                        if (deltaX < 0) {
-                            this.nextContent();
-                        } else {
-                            this.prevContent();
-                        }
-                    } else {
-                        // If not a significant swipe, reset to current position with animation
-                        this.updateCardPositions();
-                    }
-                    
-                    this.isDragging = false;
-                }, { passive: false });
-
-                // Add event listeners to check for scrollable content
-                this.cards.forEach(card => {
-                    const bodyEl = card.querySelector('.content-body');
-                    const metaEl = card.querySelector('.content-meta');
-                    const scrollHintEl = card.querySelector('.scroll-hint');
-                    
-                    // Check if content is scrollable
-                    const checkScrollable = () => {
-                        if ((bodyEl.scrollHeight > bodyEl.clientHeight) || 
-                            (metaEl.scrollHeight > metaEl.clientHeight)) {
-                            scrollHintEl.style.display = 'block';
-                        } else {
-                            scrollHintEl.style.display = 'none';
-                        }
-                    };
-                    
-                    // Check on content update
-                    const observer = new MutationObserver(checkScrollable);
-                    observer.observe(bodyEl, { childList: true, subtree: true, characterData: true });
-                    observer.observe(metaEl, { childList: true, subtree: true, characterData: true });
-                    
-                    // Prevent card navigation when scrolling content
-                    bodyEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
-                    metaEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
                 });
             }
             
@@ -922,9 +846,7 @@
     </script>
 </body>
 </html>
-<script>
-class DailyContentApp {
-    constructor() {
+
         this.currentIndex = 0;
         this.contentTypes = [
             { type: 'word', title: 'Word of the Day' },
